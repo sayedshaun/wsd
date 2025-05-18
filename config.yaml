@@ -4,9 +4,9 @@ model_name: distilbert-base-uncased
 output_dir: output/semeval2007
 num_sense: 5
 max_seq_len: 128
-batch_size: 1
+batch_size: 16
 lr: 0.00001
-epochs: 10
+epochs: 3
 logging_step: 1000
 precision: fp16
 pos_tag: all
