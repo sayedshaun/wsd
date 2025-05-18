@@ -4,7 +4,7 @@ import wandb
 import torch
 from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
-from sklearn.metrics import f1_score, classification_report, precision_score, recall_score, accuracy_score
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 
 
 
@@ -52,6 +52,7 @@ def train_fn(
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 total_loss += loss.item()
                 if global_step % logging_step == 0 and global_step > 0:
                     l, f1, p, r, a = evaluation_fn(model, val_dataloader, device)
@@ -78,7 +79,6 @@ def train_fn(
                         )
                         for ckpt in checkpoints[3:]:
                             os.remove(os.path.join(output_dir, ckpt))
-                    total_loss = 0.0
 
                 global_step += 1
                 pbar.update(1)
@@ -110,8 +110,8 @@ def evaluation_fn(
         f1 = f1_score(y_true, y_pred, average='macro', zero_division=0)
         precision = precision_score(y_true, y_pred, average='macro', zero_division=0)
         recall = recall_score(y_true, y_pred, average='macro', zero_division=0)
-        accuracy = accuracy_score(y_true, y_pred)
+        acc = accuracy_score(y_true, y_pred)
         y_true, y_pred = [], []
         model.train()
 
-    return round(loss, 3), round(f1, 3), round(precision, 3), round(recall, 3), round(accuracy, 3)
+    return round(loss,3), round(f1,3), round(precision,3), round(recall,3), round(acc,3)
