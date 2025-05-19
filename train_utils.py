@@ -17,6 +17,8 @@ def train_fn(
         lr: float = 1e-5,
         logging_step: int = 1000,
         precision: torch.dtype = torch.float16,
+        warmup_ratio: float = 0.1,
+        grad_clip: float = 1.0,
         device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
         output_dir: str = 'output',
         report_to: str = None
@@ -28,9 +30,9 @@ def train_fn(
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     total_steps = len(train_dataloader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer,
-                    num_warmup_steps=int(0.1 * total_steps),
+                    num_warmup_steps=int(warmup_ratio * total_steps),
                     num_training_steps=total_steps)
-    scaler = torch.cuda.GradScaler()
+    scaler = torch.amp.GradScaler()
     global_step = 1
     best_f1 = float('-inf')
     with tqdm(total=total_steps, desc="Training") as pbar:
@@ -52,13 +54,13 @@ def train_fn(
                     ):
                     outputs = model(**batch)
                 loss = outputs.loss
+                total_loss += loss.item()
                 scaler.scale(loss).backward()
                 scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=grad_clip)
                 scaler.step(optimizer)
                 scaler.update()
                 scheduler.step()
-                total_loss += loss.item()
                 train_y_true.extend(batch['labels'].cpu().numpy())
                 train_y_pred.extend(outputs.logits.argmax(dim=1).cpu().numpy())
                 if global_step % logging_step == 0 and global_step > 0:
@@ -69,22 +71,26 @@ def train_fn(
 
                     v_l, v_f1, v_p, v_r, v_a, v_s = evaluation_fn(model, val_dataloader, device)
                     if report_to == 'wandb':
-                        wandb.log({
-                            'train/epoch': epoch,
-                            'train/global_step': global_step,
-                            'train/loss': total_loss / logging_step,
-                            'train/accuracy': train_accu,
-                            'train/f1': t_f1,
-                            'train/precision': t_p,
-                            'train/recall': t_r,
-                            'train/support': t_s,
-                            'validation/loss': v_l,
-                            'validation/precision': v_p,
-                            'validation/recall': v_r,
-                            'validation/accuracy': v_a,
-                            'validation/f1': v_f1,
-                            'validation/support': v_s,
-                        })
+                        wandb.log(
+                            {
+                                'train/epoch': epoch,
+                                'train/global_step': global_step,
+                                'train/loss': total_loss / logging_step,
+                                'train/accuracy': train_accu,
+                                'train/f1': t_f1,
+                                'train/precision': t_p,
+                                'train/recall': t_r,
+                                'train/support': t_s,
+                                'validation/loss': v_l,
+                                'validation/precision': v_p,
+                                'validation/recall': v_r,
+                                'validation/accuracy': v_a,
+                                'validation/f1': v_f1,
+                                'validation/support': v_s,
+                            }
+                        )
+                    total_loss = 0.0
+
                     # Save checkpoints
                     if v_f1 > best_f1:
                         best_f1 = v_f1
@@ -126,10 +132,10 @@ def evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.DataLoade
             total_loss += loss
 
         loss = total_loss / len(dataloader)
-        p, r, f1, s = precision_recall_fscore_support(
+        precision, recall, f1, support = precision_recall_fscore_support(
             y_true, y_pred, average='macro', zero_division=0)
         acc = accuracy_score(y_true, y_pred)
         y_true, y_pred = [], []
         model.train()
 
-    return round(loss,3), round(f1,3), round(p,3), round(r,3), round(acc,3), round(s,3)
+    return loss, f1, precision, recall, acc, support
