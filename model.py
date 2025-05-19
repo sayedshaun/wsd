@@ -59,7 +59,7 @@ class WordSenseDisambiguationModel(torch.nn.Module):
         sent_rep_exp = sent_rep.unsqueeze(1).expand(-1, gloss_rep.size(1), -1)
         logits = (sent_rep_exp * gloss_rep).sum(dim=-1)
         if labels is not None:
-            loss_fn = torch.nn.CrossEntropyLoss(ignore_index=self.tokenizer.pad_token_id)
+            loss_fn = torch.nn.CrossEntropyLoss()
             loss = loss_fn(logits, labels)
             return ModelOutput(loss=loss, logits=logits)
         return ModelOutput(logits=logits)
