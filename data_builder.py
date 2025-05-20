@@ -1,5 +1,6 @@
 import os
 import nltk
+import random
 import polars as pl
 import xml.etree.ElementTree as ET
 nltk.download('wordnet', quiet=True)
@@ -103,10 +104,12 @@ def generate(dir_path: str) -> pl.DataFrame:
 
 
 class DataBuilder(object):
-    def __init__(self, dir_path, pos: str = "all") -> None:
+    def __init__(self, dir_path, pos: str = "all", seed: int = 1234) -> None:
         self.dir_path = dir_path
         self.POS_MAP = {'NOUN': wn.NOUN, 'VERB': wn.VERB, 'ADJ':  wn.ADJ, 'ADV':  wn.ADV}
         self.pos = pos
+        self.seed = seed
+
         if pos not in self.POS_MAP and pos != "all":
             allowed = [k.lower() for k in self.POS_MAP.keys()] + ['all']
             raise ValueError(f"Invalid POS: {pos}, Should be one of {allowed}")
@@ -121,13 +124,15 @@ class DataBuilder(object):
         df['sense_list'] = df.apply(lambda x: get_all_senses(x, self.POS_MAP), axis=1)
         df['correct_sense'] = df.apply(get_correct_sense, axis=1)
         df = df.apply(fill_empty_sense, axis=1)
-        if self.pos == "VERB":
+        random.seed(self.seed) 
+        df['sense_list'] = df['sense_list'].apply(lambda x: random.sample(x, len(x)))
+        if self.pos == "verb":
             return df[df['target_pos'] == "VERB"].reset_index(drop=True)
-        elif self.pos == "NOUN":
+        elif self.pos == "noun":
             return df[df['target_pos'] == "NOUN"].reset_index(drop=True)
-        elif self.pos == "ADJ":
+        elif self.pos == "adj":
             return df[df['target_pos'] == "ADJ"].reset_index(drop=True)
-        elif self.pos == "ADV":
+        elif self.pos == "adv":
             return df[df['target_pos'] == "ADV"].reset_index(drop=True)
         else:
             return df.reset_index(drop=True)
