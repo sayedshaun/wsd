@@ -1,4 +1,5 @@
 import torch
+import glob
 import argparse
 from dataset import WSDDataset
 from data_builder import DataBuilder
@@ -10,8 +11,11 @@ from train_utils import evaluation_fn
 
 def main(args: argparse.Namespace):
     tokenizer = get_tokenizer("distilbert-base-uncased")
+    weight_paths = glob.glob(f"{args.data_dir}/*.pt")
+    assert len(weight_paths) == 1, f"Found {len(weight_paths)} models in {args.data_dir}"
+    weight_path = weight_paths[0]
     model = WordSenseDisambiguationModel("distilbert-base-uncased", tokenizer=tokenizer).to(args.device)
-    model.load_state_dict(torch.load("output/semeval2007/step-26000-f1-0.7905.pt", map_location=args.device))
+    model.load_state_dict(torch.load(weight_path, map_location=args.device))
     model.eval()
 
     ds = WSDDataset(
