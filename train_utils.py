@@ -4,7 +4,7 @@ import wandb
 import torch
 from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, classification_report
 
 
 
@@ -69,7 +69,7 @@ def train_fn(
                         train_y_true, train_y_pred, average='macro',zero_division=0)
                     train_y_true, train_y_pred = [], []
 
-                    v_l, v_f1, v_p, v_r, v_a, v_s = evaluation_fn(model, val_dataloader, device)
+                    v_l, v_f1, v_p, v_r, v_a = evaluation_fn(model, val_dataloader, device)
                     if report_to == 'wandb':
                         wandb.log(
                             {
@@ -80,13 +80,11 @@ def train_fn(
                                 'train/f1': t_f1,
                                 'train/precision': t_p,
                                 'train/recall': t_r,
-                                'train/support': t_s,
                                 'validation/loss': v_l,
                                 'validation/precision': v_p,
                                 'validation/recall': v_r,
                                 'validation/accuracy': v_a,
                                 'validation/f1': v_f1,
-                                'validation/support': v_s,
                             }
                         )
                     total_loss = 0.0
@@ -115,7 +113,7 @@ def train_fn(
 
 
 def evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, 
-                        device: str) -> Tuple[float, float, float, float, float]:
+                            device: str) -> Tuple[float, float, float, float, float]:
     with torch.no_grad():
         y_true, y_pred = [], []
         model.eval()
@@ -135,7 +133,8 @@ def evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.DataLoade
         precision, recall, f1, support = precision_recall_fscore_support(
             y_true, y_pred, average='macro', zero_division=0)
         acc = accuracy_score(y_true, y_pred)
+        print(classification_report(y_true, y_pred, zero_division=0))
         y_true, y_pred = [], []
         model.train()
 
-    return loss, f1, precision, recall, acc, support
+    return round(loss,4), round(f1,4), round(precision,4), round(recall,4), round(acc,4)
