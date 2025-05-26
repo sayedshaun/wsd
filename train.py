@@ -37,17 +37,15 @@ def main(args: argparse.Namespace):
     )
     val_dataset = WSDDataset(
         dataframe=DataBuilder(args.val_data_dir, args.pos_tag).to_pandas(), 
-        tokenizer=tokenizer, 
-        n_sense=args.num_sense, 
-        max_seq_length=args.max_seq_len
+        tokenizer=tokenizer, n_sense=args.num_sense, max_seq_length=args.max_seq_len
     )
     train_dataloader = DataLoader(
         dataset=train_dataset, batch_size=args.batch_size, shuffle=True, 
-        pin_memory=True, num_workers=4
+        pin_memory=(args.device == "cuda"), num_workers=args.workers
     )
     val_dataloader = DataLoader(
         dataset=val_dataset, batch_size=args.batch_size, shuffle=False, 
-        pin_memory=True, num_workers=4
+        pin_memory=(args.device == "cuda"), num_workers= args.workers
     )
     model = WordSenseDisambiguationModel(model_name=args.model_name, tokenizer=tokenizer)
     print(f"Trainable params: {trainable_params(model)}")
@@ -64,9 +62,12 @@ def main(args: argparse.Namespace):
         output_dir=args.output_dir,
         report_to=args.report_to,
         lr=args.lr,
+        weight_decay=args.weight_decay,
         logging_step=args.logging_step,
         precision=args.precision,
-        device=args.device
+        device=args.device,
+        warmup_ratio=args.warmup_ratio,
+        grad_clip=args.grad_clip
     )
 
 parser = argparse.ArgumentParser(description="Word Sense Disambiguation")

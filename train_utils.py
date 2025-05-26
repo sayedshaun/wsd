@@ -19,6 +19,7 @@ def train_fn(
         precision: torch.dtype = torch.float16,
         warmup_ratio: float = 0.1,
         grad_clip: float = 1.0,
+        weight_decay: float = 0.01,
         device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
         output_dir: str = 'output',
         report_to: str = None
@@ -27,7 +28,7 @@ def train_fn(
         wandb.init(project='WordSenseDisambiguation', name=output_dir)
     os.makedirs(output_dir, exist_ok=True)
     model.to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     total_steps = len(train_dataloader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer,
                     num_warmup_steps=int(warmup_ratio * total_steps),
@@ -85,6 +86,7 @@ def train_fn(
                                 'validation/recall': v_r,
                                 'validation/accuracy': v_a,
                                 'validation/f1': v_f1,
+                                'validation/best_f1': best_f1
                             }
                         )
                     total_loss = 0.0
