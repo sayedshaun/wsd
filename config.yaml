@@ -1,17 +1,20 @@
-train_data_dir: data/Training_Corpora/SemCor
+train_data_dir: data/Evaluation_Datasets/semeval2007
 val_data_dir: data/Evaluation_Datasets/semeval2007
 model_name: distilbert-base-uncased
 output_dir: output/semeval2007
 num_sense: 5
-max_seq_len: 128
-batch_size: 16
+max_seq_len: 20
+batch_size: 1
 lr: 0.00001
+weight_decay: 0.01
 epochs: 3
-logging_step: 1000
+logging_step: 10
 precision: fp16
+warmup_ratio: 0.1
+grad_clip: 1.0
 pos_tag: all
-device: cuda
-seed: 42
+device: cpu
+seed: 1234
 report_to: wandb
 
 # run python train.py
