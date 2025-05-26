@@ -15,7 +15,7 @@ python train.py -c config.yaml
 ```
 with following configations
 ```yaml
-train_data_dir: data/Evaluation_Datasets/semeval2007
+train_data_dir: data/Training_Corpora/SemCor
 val_data_dir: data/Evaluation_Datasets/semeval2007
 model_name: distilbert-base-uncased
 output_dir: output/semeval2007
