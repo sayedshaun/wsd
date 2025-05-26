@@ -8,61 +8,44 @@ class ModelOutput(NamedTuple):
     logits: Union[torch.Tensor, None] = None
 
 
-class ContextEncoder(torch.nn.Module):
-    def __init__(self, model_name: str, **kwargs: Any) -> None:
-        super(ContextEncoder, self).__init__()
-        self.tokenizer = kwargs.get("tokenizer", None)
-        self.bert = T.AutoModel.from_pretrained(model_name)
-        self.bert.resize_token_embeddings(len(self.tokenizer), mean_resizing=False)
-
-    def forward(self, input_ids: torch.Tensor, attn_mask: torch.Tensor) -> torch.Tensor:
-        outputs = self.bert(input_ids=input_ids, attention_mask=attn_mask)
-        hidden_repr = outputs.last_hidden_state
-        return hidden_repr.mean(dim=1)
-
-
-class GlossEncoder(torch.nn.Module):
-    def __init__(self, model_name: str, **kwargs: Any) -> None:
-        super(GlossEncoder, self).__init__()
-        self.tokenizer = kwargs.get("tokenizer", None)
-        self.bert = T.AutoModel.from_pretrained(model_name)
-        self.bert.resize_token_embeddings(len(self.tokenizer), mean_resizing=False)
-
-    def forward(self, input_ids: torch.Tensor, attn_mask: torch.Tensor) -> torch.Tensor:
-        glosses_rep = []
-        for gloss, mask in zip(input_ids, attn_mask):
-            outputs = self.bert(input_ids=gloss, attention_mask=mask)
-            glosses_rep.append(outputs.last_hidden_state.mean(dim=1))
-        all_glosses = torch.stack(glosses_rep, dim=0)
-        return all_glosses # batch, n_sense, hidden
-
-
 class WordSenseDisambiguationModel(torch.nn.Module):
     def __init__(self, model_name: str, **kwargs: Any) -> None:
         super(WordSenseDisambiguationModel, self).__init__()
         self.tokenizer = kwargs.get("tokenizer", None)
         self.n_sense = kwargs.get("n_sense", 5)
         self.model_name = model_name
-        self.context_encoder = ContextEncoder(model_name, **kwargs)
-        self.gloss_encoder = GlossEncoder(model_name, **kwargs)
-        hidden_size = self.context_encoder.bert.config.hidden_size
-        self.embedding = torch.nn.Embedding(len(self.tokenizer), hidden_size)
-        self.alpha = torch.nn.Parameter(torch.tensor(0.5))
+        self.encoder = T.AutoModel.from_pretrained(model_name)
+        self.encoder.resize_token_embeddings(
+            len(self.tokenizer), mean_resizing=False
+        )
 
-    def forward(self, sentence_inputs: torch.Tensor, sentence_mask: torch.Tensor,
-            gloss_inputs: torch.Tensor, gloss_mask: torch.Tensor, target_word: torch.Tensor,
-            labels: Union[torch.Tensor, None] = None) -> ModelOutput:
-        word_embed = self.embedding(target_word).mean(dim=1)
-        sent_rep = self.context_encoder(sentence_inputs, sentence_mask)
-        sent_rep = sent_rep + word_embed # Enhanced representation
-        gloss_rep = self.gloss_encoder(gloss_inputs, gloss_mask)
-        sent_rep_exp = sent_rep.unsqueeze(1).expand(-1, gloss_rep.size(1), -1)
-        logits = (sent_rep_exp * gloss_rep).sum(dim=-1)
+    def forward(
+        self: "WordSenseDisambiguationModel",
+        sentence_inputs: torch.Tensor,   # [B, T]
+        sentence_mask:  torch.Tensor,    # [B, T]
+        gloss_inputs:   torch.Tensor,    # [B, S, L]
+        gloss_mask:     torch.Tensor,    # [B, S, L]
+        target_word:    torch.Tensor,    # [B, W]
+        labels:         torch.Tensor=None
+        ) -> ModelOutput:
+        
+        context_encoder = self.encoder(sentence_inputs, sentence_mask)
+        context_rep = context_encoder.last_hidden_state[:, 0, :]
+        context_rep = context_rep.unsqueeze(1).expand(-1, self.n_sense, -1)
+        
+        B, S, L = gloss_inputs.size()  # [B, S, L]
+        gloss_in  = gloss_inputs.view(B * S, L)             # [B*S, L]
+        gloss_msk = gloss_mask.view(B * S, L)               # [B*S, L]
+        gloss_enc = self.encoder(gloss_in, gloss_msk)       
+        gloss_cls = gloss_enc.last_hidden_state[:, 0, :]    # [B*S, H]
+        gloss_rep = gloss_cls.view(B, S, -1)                # [B, S, H]
+
+        logits = torch.einsum("bsh,bsh->bs", context_rep, gloss_rep)     
         if labels is not None:
-            loss_fn = torch.nn.CrossEntropyLoss()
-            loss = loss_fn(logits, labels)
+            loss = F.cross_entropy(logits, labels)
             return ModelOutput(loss=loss, logits=logits)
-        return ModelOutput(logits=logits)
+        else:
+            return ModelOutput(logits=logits)
 
 
 
