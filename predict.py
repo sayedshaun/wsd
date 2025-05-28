@@ -20,7 +20,7 @@ def main(args: argparse.Namespace):
     model.eval()
 
     ds = WSDDataset(
-        dataframe=DataBuilder(args.data_dir, args.pos_tag).to_pandas(), 
+        dataframe=DataBuilder(args.data_dir, args.pos, args.seed).to_pandas(), 
         tokenizer=tokenizer, 
         n_sense=args.num_sense, 
         max_seq_length=args.max_length,
@@ -28,20 +28,22 @@ def main(args: argparse.Namespace):
     )
     dataloader = DataLoader(ds, batch_size=args.batch_size, shuffle=False)
     loss, f1, precision, recall, acc = evaluation_fn(model, dataloader, args.device)
+    print("=" * 50)
     print("Loss: ", loss)
     print("F1: ", f1)
     print("Precision: ", precision)
     print("Recall: ", recall)
     print("Accuracy: ", acc)
+    print("=" * 50)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add
     parser.add_argument("--data_dir", type=str, required=True, help="Path to data directory")
     parser.add_argument("--weight_dir", type=str, required=True, help="Path to model weight directory")
-    parser.add_argument("--pos_tag", type=str, default="ALL", help="POS tag to use")
+    parser.add_argument("--pos", type=str, default="ALL", help="POS tag to use")
+    parser.add_argument("--seed", type=int, default=1234, help="Random seed for reproducibility")
     parser.add_argument("--num_sense", type=int, default=5, help="Number of sense")
-    parser.add_argument("--max_length", type=int, default=512, help="Maximum length of input")
+    parser.add_argument("--max_length", type=int, default=128, help="Maximum length of input")
     parser.add_argument("--batch_size", default=8, type=int, help="Batch size")
     parser.add_argument("--device", type=str, default=torch.device("cuda" if torch.cuda.is_available() else "cpu"))
     args = parser.parse_args()
