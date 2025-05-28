@@ -104,14 +104,15 @@ def generate(dir_path: str) -> pl.DataFrame:
 
 
 class DataBuilder(object):
-    def __init__(self, dir_path, pos: str = "all", seed: int = 1234) -> None:
+    def __init__(self, dir_path, pos: str = "ALL", seed: int = 42) -> None:
         self.dir_path = dir_path
         self.POS_MAP = {'NOUN': wn.NOUN, 'VERB': wn.VERB, 'ADJ':  wn.ADJ, 'ADV':  wn.ADV}
         self.pos = pos
         self.seed = seed
 
-        if pos not in self.POS_MAP and pos != "all":
-            allowed = [k.lower() for k in self.POS_MAP.keys()] + ['all']
+        if pos not in self.POS_MAP and pos != "ALL":
+            allowed = list(self.POS_MAP.keys())
+            allowed.append("ALL")
             raise ValueError(f"Invalid POS: {pos}, Should be one of {allowed}")
         assert os.path.exists(dir_path), f"{dir_path} does not exist"
         assert os.path.isdir(dir_path), f"{dir_path} is not a directory"
