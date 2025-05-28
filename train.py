@@ -30,13 +30,13 @@ def main(args: argparse.Namespace):
     seed_everything(args.seed)
     tokenizer = get_tokenizer(args.model_name)
     train_dataset = WSDDataset(
-        dataframe=DataBuilder(args.train_data_dir, args.pos_tag).to_pandas(), 
+        dataframe=DataBuilder(args.train_data_dir, args.pos, args.seed).to_pandas(), 
         tokenizer=tokenizer, 
         n_sense=args.num_sense, 
         max_seq_length=args.max_seq_len
     )
     val_dataset = WSDDataset(
-        dataframe=DataBuilder(args.val_data_dir, args.pos_tag).to_pandas(), 
+        dataframe=DataBuilder(args.val_data_dir, args.pos, args.seed).to_pandas(), 
         tokenizer=tokenizer, n_sense=args.num_sense, max_seq_length=args.max_seq_len
     )
     train_dataloader = DataLoader(
