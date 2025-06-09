@@ -1,20 +1,21 @@
 import torch
-import pandas as pd
+import polars as pl
 from transformers import AutoTokenizer
 from typing import Optional, Dict, Any, Tuple, List, Union, Callable
 
 class WSDDataset(torch.utils.data.Dataset):
     """
-    Dataset for Word Sense Disambiguation (WSD) task.
+    Dataset for Word Sense Disambiguation (WSD) task. 
+    This dataset generates features for token-based WSD tasks.
     """
-    def __init__(self, dataframe: pd.DataFrame, tokenizer: AutoTokenizer, n_sense: int = 5,
+    def __init__(self, dataframe: pl.DataFrame, tokenizer: AutoTokenizer, n_sense: int = 5,
             max_seq_length: int = 128) -> None:
         self.df = dataframe
         self.tokenizer = tokenizer
         self.n_sense = n_sense
         self.max_seq_length = max_seq_length
 
-    def generate_features(self, row: pd.Series) -> Tuple[torch.Tensor, List[torch.Tensor], int]:
+    def generate_features(self, row: pl.Series) -> Dict[str, torch.Tensor]:
         sentence = row['sentence']
         start = row['target_index_start']
         end = row['target_index_end']
@@ -76,6 +77,71 @@ class WSDDataset(torch.utils.data.Dataset):
 
     def __len__(self) -> int:
         return len(self.df)
+    
 
 
-__all__ = ["WSDDataset"]
+class SpanDataset(WSDDataset):
+    """
+    SpanDataset for Word Sense Disambiguation (WSD) task.
+    This dataset generates features for span-based WSD tasks.
+    """
+    
+    def generate_features(self, row: pl.Series) -> Dict[str, torch.Tensor]:
+        # Generate QA like features with start and and positions
+        sentence = row['sentence']
+        start = row['target_index_start']
+        end = row['target_index_end']
+        correct_sense = row['correct_sense']
+        target_word = row["target_lemma"]
+
+        base_senses = row.get('sense_list', [])[: max(0, self.n_sense - 1)]
+        if correct_sense not in base_senses:
+            base_senses.append(correct_sense)
+
+        senses = base_senses[-self.n_sense:]
+        assert len(senses) <= self.n_sense, f"Too many senses: {len(senses)}"
+        senses = senses + [self.tokenizer.pad_token] * (self.n_sense - len(senses))
+
+        # Reconstruct target span and insert special tokens
+        tokens = sentence.split()
+        target_span = " ".join(tokens[start:end])
+        special_token = self.add_special_tokens(target_span)
+        query = sentence.replace(target_span, special_token, 1)
+        context = query + " " + " ".join(senses)
+        start, end = self.get_start_end_positions(query, context)
+        assert start is not None and end is not None, "Start or end position not found"
+        inputs = self.tokenizer(
+            context, return_tensors="pt", padding="max_length",
+            truncation=True, max_length=self.max_seq_length
+        )
+        input_ids = inputs["input_ids"].squeeze(0)
+        attention_mask = inputs["attention_mask"].squeeze(0)
+        start_positions = torch.tensor(start, dtype=torch.long)
+        end_positions = torch.tensor(end, dtype=torch.long)
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "start_positions": start_positions,
+            "end_positions": end_positions
+        }
+
+
+    def get_start_end_positions(self, sentence: str, context: str) -> Tuple[int, int]:
+        """
+        Get the start and end positions of the query in the context.
+        """
+        query_ids = self.tokenizer.encode(sentence, add_special_tokens=False)
+        context_ids = self.tokenizer.encode(context, add_special_tokens=False)
+        start_pos, end_pos = None, None
+        window_size = len(query_ids)
+        for i in range(len(context_ids) - window_size + 1):
+            if context_ids[i:i + window_size] == query_ids:
+                start_pos = i
+                end_pos = i + window_size - 1
+                break
+        return start_pos, end_pos
+        
+
+
+
+__all__ = ["WSDDataset", "SpanDataset"]
