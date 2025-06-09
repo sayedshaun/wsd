@@ -5,6 +5,7 @@ import torch
 from tqdm import tqdm
 from sklearn import metrics
 from transformers import get_linear_schedule_with_warmup
+from utils import eval_metrics_for_span_extraction
 
 
 
@@ -169,7 +170,7 @@ def span_train_fn(
                     num_training_steps=total_steps)
     scaler = torch.amp.GradScaler()
     global_step = 1
-    best_f1 = float('-inf')
+    best_accuracy = float('-inf')
     with tqdm(total=total_steps, desc="Training") as pbar:
         for epoch in range(epochs):
             model.train()
@@ -203,39 +204,38 @@ def span_train_fn(
                 train_end_pred.extend(outputs.end_logits.argmax(dim=1).cpu().numpy())
                 # Logging
                 if global_step % logging_step == 0 and global_step > 0:
-                    t_start_f1 = metrics.f1_score(train_start_true, train_start_pred, average='micro')
-                    t_end_f1 = metrics.f1_score(train_end_true, train_end_pred, average='micro')
-                    t_joint_f1 = metrics.f1_score(
-                        [1 if s == e else 0 for s, e in zip(train_start_true, train_end_true)],
-                        [1 if s == e else 0 for s, e in zip(train_start_pred, train_end_pred)],
-                        average='micro', zero_division=0
+                    start_accu, end_accu, joint_accu = eval_metrics_for_span_extraction(
+                        torch.tensor(train_start_pred), 
+                        torch.tensor(train_end_pred), 
+                        torch.tensor(train_start_true), 
+                        torch.tensor(train_end_true)
                     )
                     train_start_true, train_start_pred = [], []
                     train_end_true, train_end_pred = [], []
 
-                    val_loss, v_start_f1, v_end_f1, v_joint_f1 = span_evaluation_fn(model, val_dataloader, device)
+                    val_loss, v_start_acc, v_end_acc, v_joint_acc = span_evaluation_fn(model, val_dataloader, device)
                     if report_to == 'wandb':
                         wandb.log(
                             {
                                 'train/epoch': epoch,
                                 'train/global_step': global_step,
                                 'train/loss': total_loss / logging_step,
-                                'train/start_f1': t_start_f1,
-                                'train/end_f1': t_end_f1,
-                                'train/joint_f1': t_joint_f1,
+                                'train/start_accuracy': start_accu,
+                                'train/end_accuracy': end_accu,
+                                'train/joint_accuracy': joint_accu,
                                 'validation/loss': val_loss,
-                                'validation/start_f1': v_start_f1,
-                                'validation/end_f1': v_end_f1,
-                                'validation/joint_f1': v_joint_f1,
-                                'validation/best_f1': best_f1
+                                'validation/start_accuracy': v_start_acc,
+                                'validation/end_accuracy': v_end_acc,
+                                'validation/joint_accuracy': v_joint_acc,
+                                'validation/best_accuracy': best_accuracy
                             }
                         )
                     total_loss = 0.0
 
                     # Save checkpoints
-                    if v_joint_f1 > best_f1:
-                        best_f1 = v_joint_f1
-                        torch.save(model.state_dict(), os.path.join(output_dir, f"step-{global_step}-f1-{v_joint_f1}.pt"))
+                    if v_joint_acc > best_accuracy:
+                        best_accuracy = v_joint_acc
+                        torch.save(model.state_dict(), os.path.join(output_dir, f"step-{global_step}-f1-{best_accuracy}.pt"))
                         
                         # Sorted by F1 score and keep 3 checkpoints
                         checkpoint_files = [f for f in os.listdir(output_dir) if f.endswith('.pt') and '-' in f]
@@ -255,7 +255,7 @@ def span_train_fn(
 
 
 def span_evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, 
-                            device: str) -> Tuple[float, float, float, float, float]:
+                    device: str) -> Tuple[float, float, float, float, float]:
     with torch.no_grad():
         start_true, start_pred = [], []
         end_true, end_pred = [], []
@@ -274,12 +274,14 @@ def span_evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.Data
             total_loss += outputs.loss.item()
 
         loss = total_loss / len(dataloader)
-        start_f1 = metrics.f1_score(start_true, start_pred, average='micro')
-        end_f1 = metrics.f1_score(end_true, end_pred, average='micro')
-        joint_f1 = metrics.f1_score(
-            [1 if s == e else 0 for s, e in zip(start_true, end_true)],
-            [1 if s == e else 0 for s, e in zip(start_pred, end_pred)],
-            average='micro', zero_division=0
+        start_acc, end_acc, joint_acc = eval_metrics_for_span_extraction(
+            torch.tensor(start_pred), 
+            torch.tensor(end_pred), 
+            torch.tensor(start_true), 
+            torch.tensor(end_true)
         )
-        print(f"Start F1: {start_f1:.4f}, End F1: {end_f1:.4f}, Joint F1: {joint_f1:.4f}")
-        return loss, start_f1, end_f1, joint_f1
+        print(f"Start Accuracy: {start_acc}, End Accuracy: {end_acc}, Joint Accuracy: {joint_acc}")
+        start_true, start_pred = [], []
+        end_true, end_pred = [], []
+        model.train()
+        return loss, start_acc, end_acc, joint_acc
