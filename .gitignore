@@ -2,3 +2,13 @@ data
 wandb
 output
 __pycache__
+*.pyc
+*.pyo
+*.ipynb_checkpoints
+*.ipynb
+*.log
+*.csv
+*.tsv
+*.json
+*.xml
+*.pickle
