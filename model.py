@@ -1,16 +1,29 @@
 import torch
 import transformers as T
+import torch.nn.functional as F
 from typing import Any, Union, NamedTuple
 
 
 class ModelOutput(NamedTuple):
+    """A named tuple to hold model outputs."""
     loss: Union[torch.Tensor, None] = None
     logits: Union[torch.Tensor, None] = None
+    hidden_states: Union[torch.Tensor, None] = None
+    attentions: Union[torch.Tensor, None] = None
 
 
-class WordSenseDisambiguationModel(torch.nn.Module):
+class QAModelOutput(NamedTuple):
+    """A named tuple to hold outputs for QA tasks."""
+    loss: Union[torch.Tensor, None] = None
+    start_logits: Union[torch.Tensor, None] = None
+    end_logits: Union[torch.Tensor, None] = None
+    hidden_states: Union[torch.Tensor, None] = None
+    attentions: Union[torch.Tensor, None] = None
+
+
+class WSDModel(torch.nn.Module):
     def __init__(self, model_name: str, **kwargs: Any) -> None:
-        super(WordSenseDisambiguationModel, self).__init__()
+        super(WSDModel, self).__init__()
         self.tokenizer = kwargs.get("tokenizer", None)
         self.n_sense = kwargs.get("n_sense", 5)
         self.model_name = model_name
@@ -20,7 +33,7 @@ class WordSenseDisambiguationModel(torch.nn.Module):
         )
 
     def forward(
-        self: "WordSenseDisambiguationModel",
+        self: "WSDModel",
         sentence_inputs: torch.Tensor,   # [B, T]
         sentence_mask:  torch.Tensor,    # [B, T]
         gloss_inputs:   torch.Tensor,    # [B, S, L]
@@ -48,6 +61,57 @@ class WordSenseDisambiguationModel(torch.nn.Module):
             return ModelOutput(logits=logits)
 
 
+class SpanExtractionModel(torch.nn.Module):
+    """Model for span extraction tasks."""
+    def __init__(self, model_name: str, **kwargs: Any) -> None:
+        super(SpanExtractionModel, self).__init__()
+        self.tokenizer = kwargs.get("tokenizer", None)
+        self.model_name = model_name
+        self.encoder = T.AutoModel.from_pretrained(model_name)
+        self.encoder.resize_token_embeddings(
+            len(self.tokenizer), mean_resizing=False
+        )
+        hidden_size = self.encoder.config.hidden_size
+        self.start_classifier = torch.nn.Linear(hidden_size, 1)
+        self.end_classifier = torch.nn.Linear(hidden_size, 1)
+        self.dropout = torch.nn.Dropout(0.1)
+
+    def forward(
+        self: "SpanExtractionModel",
+        input_ids: torch.Tensor,  # [batch_size, seq_length]
+        attention_mask:   torch.Tensor,  # [batch_size, seq_length]
+        start_positions: torch.Tensor=None,  # [batch_size]
+        end_positions:   torch.Tensor=None   # [batch_size]
+        ) -> ModelOutput:
+        encoder_output = self.encoder(input_ids, attention_mask)
+        sequence_output = encoder_output.last_hidden_state  # [batch_size, seq_length, hidden_size]
+        sequence_output = self.dropout(sequence_output)
+        start_logits = self.start_classifier(sequence_output).squeeze(-1)  # [batch_size, seq_length]
+        end_logits = self.end_classifier(sequence_output).squeeze(-1)      # [batch_size, seq_length]
+        if start_positions is not None and end_positions is not None:
+            batch_size, seq_length = start_logits.size()
+            start_positions = start_positions.clamp(0, seq_length)
+            end_positions = end_positions.clamp(0, seq_length)
+            start_loss = F.cross_entropy(
+                start_logits, start_positions, reduction='mean', ignore_index=seq_length)
+            end_loss = F.cross_entropy(
+                end_logits, end_positions, reduction='mean', ignore_index=seq_length)
+            loss = (start_loss + end_loss) / 2
+            return QAModelOutput(
+                loss=loss,
+                start_logits=start_logits,
+                end_logits=end_logits,
+                hidden_states=encoder_output.hidden_states,
+                attentions=encoder_output.attentions
+            )
+        else:
+            return ModelOutput(
+                start_logits=start_logits,
+                end_logits=end_logits,
+                hidden_states=encoder_output.hidden_states,
+                attentions=encoder_output.attentions
+            )
+        
 
 
 if __name__ == "__main__":
@@ -65,7 +129,7 @@ if __name__ == "__main__":
     target_word = torch.randint(0, len(tokenizer), (batch_size, 1))
     labels = torch.randint(0, n_sense, (batch_size,))
 
-    model = WordSenseDisambiguationModel("bert-base-uncased", tokenizer=tokenizer)
+    model = WSDModel("bert-base-uncased", tokenizer=tokenizer)
     output = model(sentence_inputs, sentence_mask, gloss_inputs, gloss_mask, labels)
     print(output.shape)
 
