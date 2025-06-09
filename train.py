@@ -2,12 +2,12 @@ import os
 import yaml
 import torch
 from data_builder import DataBuilder
-from dataset import WSDDataset
-from model import WordSenseDisambiguationModel
+from dataset import WSDDataset, SpanDataset
+from model import WSDModel, SpanExtractionModel
 from torch.utils.data import DataLoader
 import argparse
 from utils import get_tokenizer, trainable_params, seed_everything
-from train_utils import train_fn
+from train_utils import train_fn, span_train_fn
 
 
 if not os.path.exists("data/Training_Corpora") and not os.path.exists("data/Evaluation_Datasets"):
@@ -26,49 +26,86 @@ def main(args: argparse.Namespace):
     assert args.seed > 0, "Seed should be greater than 0"
     assert args.precision in ["fp16", "fp32", "bf16"], "Precision should be fp16, fp32 or bf16"
     assert args.device in ["cuda", "cpu"], "Device should be cuda or cpu"
-
-    seed_everything(args.seed)
-    tokenizer = get_tokenizer(args.model_name)
-    train_dataset = WSDDataset(
-        dataframe=DataBuilder(args.train_data_dir, args.pos, args.seed).to_pandas(), 
-        tokenizer=tokenizer, 
-        n_sense=args.num_sense, 
-        max_seq_length=args.max_seq_len
+    assert args.architecture in ["span_extraction", "cosine_similarity"], (
+        "Architecture should be `span_extraction` or `cosine_similarity`"
     )
-    val_dataset = WSDDataset(
-        dataframe=DataBuilder(args.val_data_dir, args.pos, args.seed).to_pandas(), 
-        tokenizer=tokenizer, n_sense=args.num_sense, max_seq_length=args.max_seq_len
-    )
-    train_dataloader = DataLoader(
-        dataset=train_dataset, batch_size=args.batch_size, shuffle=True, 
-        pin_memory=(args.device == "cuda"), num_workers=args.workers
-    )
-    val_dataloader = DataLoader(
-        dataset=val_dataset, batch_size=args.batch_size, shuffle=False, 
-        pin_memory=(args.device == "cuda"), num_workers= args.workers
-    )
-    model = WordSenseDisambiguationModel(model_name=args.model_name, tokenizer=tokenizer)
-    print(f"Trainable params: {trainable_params(model)}")
-
     if args.precision == "fp16": args.precision = torch.float16
     if args.precision == "fp32": args.precision = torch.float32
     if args.precision == "bf16": args.precision = torch.bfloat16
 
-    train_fn(
-        model=model, 
-        train_dataloader=train_dataloader, 
-        val_dataloader=val_dataloader, 
-        epochs=args.epochs, 
-        output_dir=args.output_dir,
-        report_to=args.report_to,
-        lr=args.lr,
-        weight_decay=args.weight_decay,
-        logging_step=args.logging_step,
-        precision=args.precision,
-        device=args.device,
-        warmup_ratio=args.warmup_ratio,
-        grad_clip=args.grad_clip
-    )
+    seed_everything(args.seed)
+    tokenizer = get_tokenizer(args.model_name)
+    if args.architecture == "span_extraction":
+        train_dataset = SpanDataset(
+            dataframe=DataBuilder(args.train_data_dir, args.pos, args.seed).to_pandas(), 
+            tokenizer=tokenizer, max_seq_length=args.max_seq_len
+        )
+        val_dataset = SpanDataset(
+            dataframe=DataBuilder(args.val_data_dir, args.pos, args.seed).to_pandas(), 
+            tokenizer=tokenizer, max_seq_length=args.max_seq_len
+        )
+        train_dataloader = DataLoader(
+            dataset=train_dataset, batch_size=args.batch_size, shuffle=True, 
+            pin_memory=(args.device == "cuda"), num_workers=args.workers
+        )
+        val_dataloader = DataLoader(
+            dataset=val_dataset, batch_size=args.batch_size, shuffle=False, 
+            pin_memory=(args.device == "cuda"), num_workers=args.workers
+        )
+        model = SpanExtractionModel(model_name=args.model_name, tokenizer=tokenizer)
+        print(f"Trainable params: {trainable_params(model)}")
+
+        span_train_fn(
+            model=model, 
+            train_dataloader=train_dataloader, 
+            val_dataloader=val_dataloader, 
+            epochs=args.epochs, 
+            output_dir=args.output_dir,
+            report_to=args.report_to,
+            lr=args.lr, 
+            logging_step=args.logging_step, 
+            precision=args.precision, 
+            device=args.device, 
+            warmup_ratio=args.warmup_ratio, 
+            grad_clip=args.grad_clip
+        )
+    else:
+        train_dataset = WSDDataset(
+            dataframe=DataBuilder(args.train_data_dir, args.pos, args.seed).to_pandas(), 
+            tokenizer=tokenizer, 
+            n_sense=args.num_sense, 
+            max_seq_length=args.max_seq_len
+        )
+        val_dataset = WSDDataset(
+            dataframe=DataBuilder(args.val_data_dir, args.pos, args.seed).to_pandas(), 
+            tokenizer=tokenizer, n_sense=args.num_sense, max_seq_length=args.max_seq_len
+        )
+        train_dataloader = DataLoader(
+            dataset=train_dataset, batch_size=args.batch_size, shuffle=True, 
+            pin_memory=(args.device == "cuda"), num_workers=args.workers
+        )
+        val_dataloader = DataLoader(
+            dataset=val_dataset, batch_size=args.batch_size, shuffle=False, 
+            pin_memory=(args.device == "cuda"), num_workers= args.workers
+        )
+        model = WSDModel(model_name=args.model_name, tokenizer=tokenizer)
+        print(f"Trainable params: {trainable_params(model)}")
+
+        train_fn(
+            model=model, 
+            train_dataloader=train_dataloader, 
+            val_dataloader=val_dataloader, 
+            epochs=args.epochs, 
+            output_dir=args.output_dir,
+            report_to=args.report_to,
+            lr=args.lr,
+            weight_decay=args.weight_decay,
+            logging_step=args.logging_step,
+            precision=args.precision,
+            device=args.device,
+            warmup_ratio=args.warmup_ratio,
+            grad_clip=args.grad_clip
+        )
 
 parser = argparse.ArgumentParser(description="Word Sense Disambiguation")
 parser.add_argument("-c", type=str, required=True, help="Config file path")
