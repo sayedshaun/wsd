@@ -1,6 +1,4 @@
-#train_data_dir: data/Training_Corpora/SemCor
-train_data_dir: data/Evaluation_Datasets/semeval2007
-
+train_data_dir: data/Training_Corpora/SemCor
 val_data_dir: data/Evaluation_Datasets/semeval2007
 model_name: distilbert-base-uncased
 output_dir: output/semeval2007
@@ -20,5 +18,3 @@ seed: 1234
 workers: 1
 report_to: none
 architecture: span_extraction
-
-# run python train.py
