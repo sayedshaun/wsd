@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Sayed Shaun.  All rights reserved.
+
 import os
 from typing import Tuple
 import wandb
@@ -5,11 +7,34 @@ import torch
 from tqdm import tqdm
 from sklearn import metrics
 from transformers import get_linear_schedule_with_warmup
-from utils import eval_metrics_for_span_extraction
+from utils import eval_metrics_for_span_extraction, evaluation_fn, span_evaluation_fn, trainable_params
 
 
+docstring = """
+    Train function for span extraction tasks like question answering.
+    Args:
+
+        model (torch.nn.Module): The model to train.
+        train_dataloader (torch.utils.data.DataLoader): The dataloader for training data.
+        val_dataloader (torch.utils.data.DataLoader): The dataloader for validation data.
+        epochs (int, optional): The number of epochs to train for. Defaults to 5.
+        lr (float, optional): The learning rate for the optimizer. Defaults to 1e-5.
+        logging_step (int, optional): The number of steps between logging updates. Defaults to 1000.
+        precision (torch.dtype, optional): The precision for training. Defaults to torch.float16.
+        warmup_ratio (float, optional): The ratio of training steps for warmup. Defaults to 0.1.
+        grad_clip (float, optional): The maximum norm for gradient clipping. Defaults to 1.0.
+        weight_decay (float, optional): The weight decay for the optimizer. Defaults to 0.01.
+        device (str, optional): The device to train on ('cuda' or 'cpu'). Defaults to 'cuda' if available.
+        output_dir (str, optional): The directory to save model checkpoints. Defaults to 'output'.
+        report_to (str, optional): The reporting tool to use ('wandb' or None). Defaults to None.
+"""
+
+def add_docstring(func):
+    func.__doc__ = docstring
+    return func
 
 
+@add_docstring
 def train_fn(
         model: torch.nn.Module,
         train_dataloader: torch.utils.data.DataLoader,
@@ -34,10 +59,10 @@ def train_fn(
     scheduler = get_linear_schedule_with_warmup(optimizer,
                     num_warmup_steps=int(warmup_ratio * total_steps),
                     num_training_steps=total_steps)
-    scaler = torch.amp.GradScaler()
+    scaler = torch.amp.GradScaler(enabled=torch.cuda.is_available())
     global_step = 1
     best_f1 = float('-inf')
-    with tqdm(total=total_steps, desc="Training") as pbar:
+    with tqdm(total=total_steps, desc=f"Training | Params: {trainable_params(model)}") as pbar:
         for epoch in range(epochs):
             model.train()
             total_loss = 0.0
@@ -72,6 +97,7 @@ def train_fn(
                     train_y_true, train_y_pred = [], []
 
                     v_l, v_f1, v_p, v_r, v_a = evaluation_fn(model, val_dataloader, device)
+                    pbar.set_postfix({'f1': v_f1, 'best_f1': best_f1})
                     if report_to == 'wandb':
                         wandb.log(
                             {
@@ -96,7 +122,6 @@ def train_fn(
                     if v_f1 > best_f1:
                         best_f1 = v_f1
                         torch.save(model.state_dict(), os.path.join(output_dir, f"step-{global_step}-f1-{v_f1}.pt"))
-                        
                         # Sorted by F1 score and keep 3 checkpoints
                         checkpoint_files = [f for f in os.listdir(output_dir) if f.endswith('.pt') and '-' in f]
                         checkpoints = sorted(
@@ -113,37 +138,7 @@ def train_fn(
         wandb.finish()
 
 
-
-
-def evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, 
-                            device: str) -> Tuple[float, float, float, float, float]:
-    with torch.no_grad():
-        y_true, y_pred = [], []
-        model.eval()
-        total_loss = 0.0
-        for batch in tqdm(dataloader, desc="Evaluating"):
-            batch = {
-                k: (v.to(device) if isinstance(v, torch.Tensor)
-                else [g.to(device) for g in v]) for k, v in batch.items()
-            }
-            outputs = model(**batch)  # (batch, n_sense)
-            y_true.extend(batch['labels'].cpu().numpy())
-            y_pred.extend(outputs.logits.argmax(dim=1).cpu().numpy())
-            loss = outputs.loss.item()
-            total_loss += loss
-
-        loss = total_loss / len(dataloader)
-        precision, recall, f1, support = metrics.precision_recall_fscore_support(
-            y_true, y_pred, average='macro', zero_division=0)
-        acc = metrics.accuracy_score(y_true, y_pred)
-        print(metrics.classification_report(y_true, y_pred, zero_division=0))
-        y_true, y_pred = [], []
-        model.train()
-
-    return round(loss,4), round(f1,4), round(precision,4), round(recall,4), round(acc,4)
-
-
-
+@add_docstring
 def span_train_fn(
         model: torch.nn.Module,
         train_dataloader: torch.utils.data.DataLoader,
@@ -159,6 +154,7 @@ def span_train_fn(
         output_dir: str = 'output',
         report_to: str = None
     ) -> None:
+
     if report_to == 'wandb':
         wandb.init(project='WordSenseDisambiguation', name=output_dir)
     os.makedirs(output_dir, exist_ok=True)
@@ -168,10 +164,10 @@ def span_train_fn(
     scheduler = get_linear_schedule_with_warmup(optimizer,
                     num_warmup_steps=int(warmup_ratio * total_steps),
                     num_training_steps=total_steps)
-    scaler = torch.amp.GradScaler()
+    scaler = torch.amp.GradScaler(enabled=torch.cuda.is_available())
     global_step = 1
-    best_accuracy = float('-inf')
-    with tqdm(total=total_steps, desc="Training") as pbar:
+    best_f1 = float('-inf')
+    with tqdm(total=total_steps, desc=f"Training | Params: {trainable_params(model)}") as pbar:
         for epoch in range(epochs):
             model.train()
             total_loss = 0.0
@@ -204,39 +200,39 @@ def span_train_fn(
                 train_end_pred.extend(outputs.end_logits.argmax(dim=1).cpu().numpy())
                 # Logging
                 if global_step % logging_step == 0 and global_step > 0:
-                    start_accu, end_accu, joint_accu = eval_metrics_for_span_extraction(
-                        torch.tensor(train_start_pred), 
-                        torch.tensor(train_end_pred), 
-                        torch.tensor(train_start_true), 
-                        torch.tensor(train_end_true)
+                    start_f1, end_f1, joint_f1 = eval_metrics_for_span_extraction(
+                        pred_start=train_start_pred, 
+                        pred_end=train_end_pred, 
+                        start_positions=train_start_true, 
+                        end_positions=train_end_true
                     )
                     train_start_true, train_start_pred = [], []
                     train_end_true, train_end_pred = [], []
 
-                    val_loss, v_start_acc, v_end_acc, v_joint_acc = span_evaluation_fn(model, val_dataloader, device)
+                    val_loss, v_start_f1, v_end_f1, v_joint_f1 = span_evaluation_fn(model, val_dataloader, device)
+                    pbar.set_postfix({'joint_f1': v_joint_f1, 'best_f1': best_f1})
                     if report_to == 'wandb':
                         wandb.log(
                             {
                                 'train/epoch': epoch,
                                 'train/global_step': global_step,
                                 'train/loss': total_loss / logging_step,
-                                'train/start_accuracy': start_accu,
-                                'train/end_accuracy': end_accu,
-                                'train/joint_accuracy': joint_accu,
+                                'train/start_f1': start_f1,
+                                'train/end_f1': end_f1,
+                                'train/joint_f1': joint_f1,
                                 'validation/loss': val_loss,
-                                'validation/start_accuracy': v_start_acc,
-                                'validation/end_accuracy': v_end_acc,
-                                'validation/joint_accuracy': v_joint_acc,
-                                'validation/best_accuracy': best_accuracy
+                                'validation/start_f1': v_start_f1,
+                                'validation/end_f1': v_end_f1,
+                                'validation/joint_f1': v_joint_f1,
+                                'validation/best_f1': best_f1
                             }
                         )
                     total_loss = 0.0
 
                     # Save checkpoints
-                    if v_joint_acc > best_accuracy:
-                        best_accuracy = v_joint_acc
-                        torch.save(model.state_dict(), os.path.join(output_dir, f"step-{global_step}-f1-{best_accuracy}.pt"))
-                        
+                    if v_joint_f1 > best_f1:
+                        best_f1 = v_joint_f1
+                        torch.save(model.state_dict(), os.path.join(output_dir, f"step-{global_step}-f1-{best_f1}.pt"))
                         # Sorted by F1 score and keep 3 checkpoints
                         checkpoint_files = [f for f in os.listdir(output_dir) if f.endswith('.pt') and '-' in f]
                         checkpoints = sorted(
@@ -251,37 +247,3 @@ def span_train_fn(
                 pbar.update(1)
     if report_to == 'wandb':
         wandb.finish()
-
-
-
-def span_evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, 
-                    device: str) -> Tuple[float, float, float, float, float]:
-    with torch.no_grad():
-        start_true, start_pred = [], []
-        end_true, end_pred = [], []
-        model.eval()
-        total_loss = 0.0
-        for batch in tqdm(dataloader, desc="Evaluating"):
-            batch = {
-                k: (v.to(device) if isinstance(v, torch.Tensor)
-                else [g.to(device) for g in v]) for k, v in batch.items()
-            }
-            outputs = model(**batch)  # (batch, n_sense)
-            start_true.extend(batch['start_positions'].cpu().numpy())
-            start_pred.extend(outputs.start_logits.argmax(dim=1).cpu().numpy())
-            end_true.extend(batch['end_positions'].cpu().numpy())
-            end_pred.extend(outputs.end_logits.argmax(dim=1).cpu().numpy())
-            total_loss += outputs.loss.item()
-
-        loss = total_loss / len(dataloader)
-        start_acc, end_acc, joint_acc = eval_metrics_for_span_extraction(
-            torch.tensor(start_pred), 
-            torch.tensor(end_pred), 
-            torch.tensor(start_true), 
-            torch.tensor(end_true)
-        )
-        print(f"Start Accuracy: {start_acc}, End Accuracy: {end_acc}, Joint Accuracy: {joint_acc}")
-        start_true, start_pred = [], []
-        end_true, end_pred = [], []
-        model.train()
-        return loss, start_acc, end_acc, joint_acc
