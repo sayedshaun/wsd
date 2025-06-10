@@ -53,7 +53,6 @@ def main(args: argparse.Namespace):
             pin_memory=(args.device == "cuda"), num_workers=args.workers
         )
         model = SpanExtractionModel(model_name=args.model_name, tokenizer=tokenizer)
-        print(f"Trainable params: {trainable_params(model)}")
 
         span_train_fn(
             model=model, 
@@ -89,7 +88,6 @@ def main(args: argparse.Namespace):
             pin_memory=(args.device == "cuda"), num_workers= args.workers
         )
         model = WSDModel(model_name=args.model_name, tokenizer=tokenizer)
-        print(f"Trainable params: {trainable_params(model)}")
 
         train_fn(
             model=model, 
