@@ -62,7 +62,7 @@ class WSDModel(torch.nn.Module):
 
 
 class SpanExtractionModel(torch.nn.Module):
-    """Model for span extraction tasks."""
+    """Model for span extraction tasks like question answering."""
     def __init__(self, model_name: str, **kwargs: Any) -> None:
         super(SpanExtractionModel, self).__init__()
         self.tokenizer = kwargs.get("tokenizer", None)
@@ -78,60 +78,39 @@ class SpanExtractionModel(torch.nn.Module):
 
     def forward(
         self: "SpanExtractionModel",
-        input_ids: torch.Tensor,  # [batch_size, seq_length]
-        attention_mask:   torch.Tensor,  # [batch_size, seq_length]
-        start_positions: torch.Tensor=None,  # [batch_size]
-        end_positions:   torch.Tensor=None   # [batch_size]
-        ) -> ModelOutput:
+        input_ids: torch.Tensor,                             # [batch_size, seq_length]
+        attention_mask:   torch.Tensor,                      # [batch_size, seq_length]
+        start_positions: Union[torch.Tensor, None]=None,     # [batch_size]
+        end_positions:   Union[torch.Tensor, None]=None      # [batch_size]
+        ) -> QAModelOutput:
         encoder_output = self.encoder(input_ids, attention_mask)
         sequence_output = encoder_output.last_hidden_state  # [batch_size, seq_length, hidden_size]
         sequence_output = self.dropout(sequence_output)
         start_logits = self.start_classifier(sequence_output).squeeze(-1)  # [batch_size, seq_length]
         end_logits = self.end_classifier(sequence_output).squeeze(-1)      # [batch_size, seq_length]
         if start_positions is not None and end_positions is not None:
-            batch_size, seq_length = start_logits.size()
-            start_positions = start_positions.clamp(0, seq_length)
-            end_positions = end_positions.clamp(0, seq_length)
+            seq_length = start_logits.size(1)
+            ignore_index = seq_length  # Ignore the last token for loss calculation
+            start_positions = start_positions.clamp(0, ignore_index)
+            end_positions = end_positions.clamp(0, ignore_index)
             start_loss = F.cross_entropy(
-                start_logits, start_positions, reduction='mean', ignore_index=seq_length)
+                input=start_logits, target=start_positions, 
+                reduction='mean', ignore_index=ignore_index)
             end_loss = F.cross_entropy(
-                end_logits, end_positions, reduction='mean', ignore_index=seq_length)
+                input=end_logits, target=end_positions, 
+                reduction='mean', ignore_index=ignore_index)
             loss = (start_loss + end_loss) / 2
             return QAModelOutput(
-                loss=loss,
-                start_logits=start_logits,
-                end_logits=end_logits,
+                loss=loss, start_logits=start_logits, end_logits=end_logits, 
                 hidden_states=encoder_output.hidden_states,
                 attentions=encoder_output.attentions
             )
-        else:
-            return ModelOutput(
-                start_logits=start_logits,
-                end_logits=end_logits,
-                hidden_states=encoder_output.hidden_states,
-                attentions=encoder_output.attentions
-            )
-        
+        return QAModelOutput(
+            start_logits=start_logits, end_logits=end_logits, 
+            hidden_states=encoder_output.hidden_states, 
+            attentions=encoder_output.attentions
+        )
+    
 
 
-if __name__ == "__main__":
-    from utils import get_tokenizer
-    tokenizer = get_tokenizer("bert-base-uncased")
-    batch_size = 2
-    seq_len = 50
-    n_sense = 5
-    gloss_len = 50
-
-    sentence_inputs = torch.randint(0, len(tokenizer), (batch_size, seq_len))
-    sentence_mask = torch.ones((batch_size, seq_len), dtype=torch.long)
-    gloss_inputs = torch.randint(0, len(tokenizer), (batch_size, n_sense, gloss_len))
-    gloss_mask = torch.ones((batch_size, n_sense, gloss_len), dtype=torch.long)
-    target_word = torch.randint(0, len(tokenizer), (batch_size, 1))
-    labels = torch.randint(0, n_sense, (batch_size,))
-
-    model = WSDModel("bert-base-uncased", tokenizer=tokenizer)
-    output = model(sentence_inputs, sentence_mask, gloss_inputs, gloss_mask, labels)
-    print(output.shape)
-
-
-
+__all__ = ["WSDModel", "SpanExtractionModel"]
