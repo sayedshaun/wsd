@@ -1,6 +1,31 @@
 # Word Sense Disambiguation (WSD) 
 This project implements algorithms and tools for Word Sense Disambiguation (WSD), the task of determining the correct meaning of a word based on its context in a sentence. It provides datasets, evaluation scripts, and models to facilitate research and development in natural language processing applications where accurate word sense interpretation is essential.
 
+## Project Structure
+```
+📁 Word Sense Disambiguation (WSD)
+├── 📄 .gitignore
+├── 📄 LICENSE
+├── 📄 README.md
+├── 📄 config.yaml
+├── 📄 requirements.txt
+├── 📄 download.sh
+│
+├── 🧠 Core Modules
+│   ├── 📄 model.py
+│   ├── 📄 predict.py
+│   ├── 📄 train.py
+│
+├── 🧰 Utilities
+│   ├── 📄 train_utils.py
+│   ├── 📄 utils.py
+│   ├── 📄 wn_utils.py
+│
+├── 📊 Data
+│   ├── 📄 dataset.py
+│   ├── 📄 data_builder.py
+│
+```
 ## Setup
 This project requires `python=3.10`
 
