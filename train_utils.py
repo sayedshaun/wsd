@@ -51,7 +51,7 @@ def train_fn(
         report_to: str = None
     ) -> None:
     if report_to == 'wandb':
-        wandb.init(project='WordSenseDisambiguation', name=output_dir)
+        wandb.init(project='wsd', name=output_dir)
     os.makedirs(output_dir, exist_ok=True)
     model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -95,9 +95,11 @@ def train_fn(
                     t_p, t_r, t_f1, t_s = metrics.precision_recall_fscore_support(
                         train_y_true, train_y_pred, average='macro',zero_division=0)
                     train_y_true, train_y_pred = [], []
-
+                    prev_desc = pbar.desc
+                    pbar.set_description("Evaluating...")
                     v_l, v_f1, v_p, v_r, v_a = evaluation_fn(model, val_dataloader, device)
                     pbar.set_postfix({'accuracy': v_a, 'precision': v_p, 'recall': v_r, 'f1': v_f1, 'best_f1': best_f1})
+                    pbar.set_description(prev_desc)
                     if report_to == 'wandb':
                         wandb.log(
                             {
@@ -156,7 +158,7 @@ def span_train_fn(
     ) -> None:
 
     if report_to == 'wandb':
-        wandb.init(project='WordSenseDisambiguation', name=output_dir)
+        wandb.init(project='wsd', name=output_dir)
     os.makedirs(output_dir, exist_ok=True)
     model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -165,7 +167,7 @@ def span_train_fn(
                     num_warmup_steps=int(warmup_ratio * total_steps),
                     num_training_steps=total_steps)
     scaler = torch.amp.GradScaler(enabled=torch.cuda.is_available())
-    global_step = 1
+    global_step = 0
     best_f1 = float('-inf')
     with tqdm(total=total_steps, desc=f"Training | Params: {trainable_params(model)}") as pbar:
         for epoch in range(epochs):
@@ -208,9 +210,11 @@ def span_train_fn(
                     )
                     train_start_true, train_start_pred = [], []
                     train_end_true, train_end_pred = [], []
-
+                    prev_desc = pbar.desc
+                    pbar.set_description("Evaluating...")
                     val_loss, v_start_f1, v_end_f1, v_joint_f1 = span_evaluation_fn(model, val_dataloader, device)
                     pbar.set_postfix({'start_f1': v_start_f1, 'end_f1': v_end_f1, 'joint_f1': v_joint_f1, 'best_f1': best_f1})
+                    pbar.set_description(prev_desc)
                     if report_to == 'wandb':
                         wandb.log(
                             {
