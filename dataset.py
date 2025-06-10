@@ -110,7 +110,7 @@ class SpanDataset(WSDDataset):
         special_token = self.add_special_tokens(target_span)
         query = sentence.replace(target_span, special_token, 1)
         context = query + " " + " ".join(senses)
-        start, end = self.sliding_window(correct_sense, context)
+        start, end = self.find_start_and_end_position(correct_sense, context)
         assert start is not None and end is not None, "Start or end position not found"
         inputs = self.tokenizer(
             context, return_tensors="pt", padding="max_length",
