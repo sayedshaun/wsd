@@ -29,7 +29,7 @@ logging_step: 10
 precision: fp16
 warmup_ratio: 0.1
 grad_clip: 1.0
-pos_tag: all
+pos_tag: ALL
 device: cpu
 seed: 1234
 report_to: wandb
