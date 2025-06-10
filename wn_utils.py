@@ -15,7 +15,7 @@ def get_all_senses(row: pl.Series, pos_map: Optional[Dict[str, Any]] = None) -> 
     wn_pos = pos_map.get(row['target_pos'], None)
     if wn_pos:
         syns = wn.synsets(str(row['target_lemma']), pos=wn_pos)
-    elif pd.notna(row['target_lemma']):
+    elif row['target_lemma'] != '' or row['target_lemma'] is not None:
         syns = wn.synsets(str(row['target_lemma']))
     else:
         word = row['sentence'].split()[row['target_index_start']]
@@ -28,7 +28,7 @@ def get_correct_sense(row: pl.Series) -> Union[str, None]:
     """
     Return the correct sense for this row's lemma+POS.
     """
-    if 'sense_key' in row and pd.notna(row['sense_key']):
+    if 'sense_key' in row and row['sense_key'] is not None and row['sense_key'] != '':
         lem = wn.lemma_from_key(row['sense_key'])
         syn = lem.synset()
         return syn.definition()
