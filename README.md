@@ -63,12 +63,12 @@ architecture: span_extraction
 
 ## Evaluation
 ```bash
-python predict.py --data_dir "eval_data_dir" \
-                  --weight_dir "saved_model_dir" \
-                  --output_dir "output_dir" \
-                  --pos_tag "ALL" \
+python predict.py --data_dir "data/Evaluation_Datasets/semeval2015" \
+                  --model_name "distilbert-base-uncased" \
+                  --weight_dir "output/semeval2007" \
+                  --pos "ALL" \
                   --num_sense 5 \
-                  --max_length 128 \
+                  --max_length 256 \
                   --batch_size 32 \
                   --architecture "span_extraction"
 ```
