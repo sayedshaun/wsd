@@ -11,7 +11,7 @@ from utils import eval_metrics_for_span_extraction, evaluation_fn, span_evaluati
 
 
 docstring = """
-    Train function for span extraction tasks like question answering.
+    Train function for training the he model for word sense disambiguation task .
     Args:
 
         model (torch.nn.Module): The model to train.
