@@ -1,5 +1,5 @@
 import torch
-import polars as pl
+import pandas as pd
 from transformers import AutoTokenizer
 from typing import Optional, Dict, Any, Tuple, List, Union, Callable
 
@@ -8,14 +8,14 @@ class WSDDataset(torch.utils.data.Dataset):
     Dataset for Word Sense Disambiguation (WSD) task. 
     This dataset generates features for token-based WSD tasks.
     """
-    def __init__(self, dataframe: pl.DataFrame, tokenizer: AutoTokenizer, n_sense: int = 5,
+    def __init__(self, dataframe: pd.DataFrame, tokenizer: AutoTokenizer, n_sense: int = 5,
             max_seq_length: int = 128) -> None:
         self.df = dataframe
         self.tokenizer = tokenizer
         self.n_sense = n_sense
         self.max_seq_length = max_seq_length
 
-    def generate_features(self, row: pl.Series) -> Dict[str, torch.Tensor]:
+    def generate_features(self, row: pd.Series) -> Dict[str, torch.Tensor]:
         sentence = row['sentence']
         start = row['target_index_start']
         end = row['target_index_end']
@@ -86,8 +86,10 @@ class SpanDataset(WSDDataset):
     This dataset generates features for span-based WSD tasks.
     """
     
-    def generate_features(self, row: pl.Series) -> Dict[str, torch.Tensor]:
-        # Generate QA like features with start and and positions
+    def generate_features(self, row: pd.Series) -> Dict[str, torch.Tensor]:
+        """
+        Generate QA like features with start and end positions of the correct sense in the context.
+        """
         sentence = row['sentence']
         start = row['target_index_start']
         end = row['target_index_end']
@@ -108,11 +110,12 @@ class SpanDataset(WSDDataset):
         special_token = self.add_special_tokens(target_span)
         query = sentence.replace(target_span, special_token, 1)
         context = query + " " + " ".join(senses)
-        start, end = self.get_start_end_positions(query, context)
+        start, end = self.sliding_window(correct_sense, context)
         assert start is not None and end is not None, "Start or end position not found"
         inputs = self.tokenizer(
             context, return_tensors="pt", padding="max_length",
-            truncation=True, max_length=self.max_seq_length
+            truncation=True, max_length=self.max_seq_length,
+            add_special_tokens=False
         )
         input_ids = inputs["input_ids"].squeeze(0)
         attention_mask = inputs["attention_mask"].squeeze(0)
@@ -126,11 +129,11 @@ class SpanDataset(WSDDataset):
         }
 
 
-    def get_start_end_positions(self, sentence: str, context: str) -> Tuple[int, int]:
+    def sliding_window(self, sense: str, context: str) -> Tuple[int, int]:
         """
         Get the start and end positions of the query in the context.
         """
-        query_ids = self.tokenizer.encode(sentence, add_special_tokens=False)
+        query_ids = self.tokenizer.encode(sense, add_special_tokens=False)
         context_ids = self.tokenizer.encode(context, add_special_tokens=False)
         start_pos, end_pos = None, None
         window_size = len(query_ids)
@@ -140,7 +143,38 @@ class SpanDataset(WSDDataset):
                 end_pos = i + window_size - 1
                 break
         return start_pos, end_pos
-        
+
+
+    def find_start_and_end_position(self, correct_sense: str, processed_sequence: str) -> Tuple[int, int]:
+            start_char_index = processed_sequence.find(correct_sense)
+            if start_char_index < 0:
+                raise ValueError(f"Could not find `{correct_sense}` in `{processed_sequence}`.")
+            end_char_index = start_char_index + len(correct_sense)
+
+            encoding = self.tokenizer(
+                processed_sequence,
+                return_offsets_mapping=True,
+                add_special_tokens=True,
+            )
+            offset_mapping = encoding["offset_mapping"]
+
+            start_token_index = None
+            end_token_index = None
+            for i, (tok_start, tok_end) in enumerate(offset_mapping):
+                if tok_end == 0 and tok_start == 0:
+                    continue
+                # If the token’s span covers the first character of correct_sense,
+                # that is our start_token.
+                if tok_start <= start_char_index < tok_end:
+                    start_token_index = i
+                # If the token’s span covers the *last* character of correct_sense,
+                # that is our end_token (inclusive).
+                if tok_start <  end_char_index <= tok_end:
+                    end_token_index = i
+                    break
+
+            return start_token_index, end_token_index
+    
 
 
 
