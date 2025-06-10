@@ -1,11 +1,11 @@
 import nltk
-import pandas as pd
+import polars as pl
 from nltk.corpus import wordnet as wn
 nltk.download('wordnet', quiet=True)
 from typing import Optional, Dict, Any, List, Union
 
 
-def get_all_senses(row: pd.Series, pos_map: Optional[Dict[str, Any]] = None) -> List[str]:
+def get_all_senses(row: pl.Series, pos_map: Optional[Dict[str, Any]] = None) -> List[str]:
     """
     Return up to `max_senses` for this row's lemma+POS.
     If you have a sense_key and want to enforce it exactly,
@@ -24,7 +24,7 @@ def get_all_senses(row: pd.Series, pos_map: Optional[Dict[str, Any]] = None) -> 
     return [s.definition() for s in syns]
 
 
-def get_correct_sense(row: pd.Series) -> Union[str, None]:
+def get_correct_sense(row: pl.Series) -> Union[str, None]:
     """
     Return the correct sense for this row's lemma+POS.
     """
@@ -34,7 +34,7 @@ def get_correct_sense(row: pd.Series) -> Union[str, None]:
         return syn.definition()
 
 
-def fill_empty_sense(row: pd.Series) -> pd.Series:
+def fill_empty_sense(row: pl.Series) -> pl.Series:
     """
     Fill empty sense_list with the first sense of the word.
     """
