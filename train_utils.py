@@ -97,7 +97,7 @@ def train_fn(
                     train_y_true, train_y_pred = [], []
 
                     v_l, v_f1, v_p, v_r, v_a = evaluation_fn(model, val_dataloader, device)
-                    pbar.set_postfix({'f1': v_f1, 'best_f1': best_f1})
+                    pbar.set_postfix({'accuracy': v_a, 'precision': v_p, 'recall': v_r, 'f1': v_f1, 'best_f1': best_f1})
                     if report_to == 'wandb':
                         wandb.log(
                             {
@@ -210,7 +210,7 @@ def span_train_fn(
                     train_end_true, train_end_pred = [], []
 
                     val_loss, v_start_f1, v_end_f1, v_joint_f1 = span_evaluation_fn(model, val_dataloader, device)
-                    pbar.set_postfix({'joint_f1': v_joint_f1, 'best_f1': best_f1})
+                    pbar.set_postfix({'start_f1': v_start_f1, 'end_f1': v_end_f1, 'joint_f1': v_joint_f1, 'best_f1': best_f1})
                     if report_to == 'wandb':
                         wandb.log(
                             {
