@@ -33,6 +33,7 @@ pos_tag: all
 device: cpu
 seed: 1234
 report_to: wandb
+architecture: span_extraction
 ```
 
 ## Evaluation
@@ -44,7 +45,7 @@ python predict.py --data_dir "eval_data_dir" \
                   --num_sense 5 \
                   --max_length 128 \
                   --batch_size 32 \
-                  --device "cuda"
+                  --architecture "span_extraction"
 ```
 
 ## Dataset Details
