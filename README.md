@@ -4,27 +4,27 @@ This project implements algorithms and tools for Word Sense Disambiguation (WSD)
 ## Project Structure
 ```
 📁 Word Sense Disambiguation (WSD)
-├── 📄 .gitignore
-├── 📄 LICENSE
-├── 📄 README.md
-├── 📄 config.yaml
-├── 📄 requirements.txt
-├── 📄 download.sh
-│
-├── 🧠 Core Modules
-│   ├── 📄 model.py
-│   ├── 📄 predict.py
-│   ├── 📄 train.py
-│
-├── 🧰 Utilities
-│   ├── 📄 train_utils.py
-│   ├── 📄 utils.py
-│   ├── 📄 wn_utils.py
-│
-├── 📊 Data
-│   ├── 📄 dataset.py
-│   ├── 📄 data_builder.py
-│
+    ├── 📄 .gitignore
+    ├── 📄 LICENSE
+    ├── 📄 README.md
+    ├── 📄 config.yaml
+    ├── 📄 requirements.txt
+    ├── 📄 download.sh
+    │
+    ├── 🧠 Core Modules
+    │   ├── 📄 model.py
+    │   ├── 📄 predict.py
+    │   ├── 📄 train.py
+    │
+    ├── 🧰 Utilities
+    │   ├── 📄 train_utils.py
+    │   ├── 📄 utils.py
+    │   ├── 📄 wn_utils.py
+    │
+    ├── 📊 Data
+    │   ├── 📄 dataset.py
+    │   ├── 📄 data_builder.py
+    │
 ```
 ## Setup
 This project requires `python=3.10`
