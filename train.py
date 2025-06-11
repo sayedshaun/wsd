@@ -28,7 +28,7 @@ def main(args: argparse.Namespace):
     assert args.architecture in ["span", "cosine"], (
         "Architecture should be `span` or `cosine`"
     )
-    if isinstance(args.seed, str):
+    if args.seed is None or args.seed == "none":
         args.seed = None
     if args.precision == "fp16": args.precision = torch.float16
     if args.precision == "fp32": args.precision = torch.float32
