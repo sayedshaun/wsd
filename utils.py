@@ -10,6 +10,13 @@ from transformers import AutoTokenizer
 
 
 def get_tokenizer(model_name: str) -> AutoTokenizer:
+    """
+    Load the tokenizer for the specified model.
+    Args:
+        model_name (str): The name of the model to load the tokenizer for.
+    Returns:
+        AutoTokenizer: The tokenizer for the specified model.
+    """
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.add_special_tokens(
         {"additional_special_tokens": ["<classify>", "</classify>"]}
@@ -17,7 +24,14 @@ def get_tokenizer(model_name: str) -> AutoTokenizer:
     return tokenizer
 
 
-def trainable_params(model: torch.nn.Module) -> int | float:
+def trainable_params(model: torch.nn.Module) -> Union[str, float]:
+    """
+    Calculate the number of trainable parameters in the model.
+    Args:
+        model (torch.nn.Module): The model to analyze.
+    Returns:
+        str: A string representation of the number of trainable parameters in millions.
+    """
     params = 0
     for param in model.parameters():
         if param.requires_grad:
@@ -28,6 +42,10 @@ def trainable_params(model: torch.nn.Module) -> int | float:
 def seed_everything(seed: Union[int, None] = None) -> None:
     """
     Set random seed for reproducibility.
+    Args:
+        seed (int, optional): The seed value. If None, no seed is set.
+    Returns:
+        None
     """
     if seed is None:
         return
@@ -43,7 +61,17 @@ def seed_everything(seed: Union[int, None] = None) -> None:
 def load_model_weights(model: torch.nn.Module, weight_dir: str, device: str) -> None:
     """
     Load model weights from the specified directory.
+    Args:
+        model (torch.nn.Module): The model to load weights into.
+        weight_dir (str): Directory containing the model weights.
+        device (str): Device to load the model on ('cpu' or 'cuda').
+    Returns:
+        None
+    Raises:
+        FileNotFoundError: If no weights are found in the specified directory.
     """
+    if not os.path.exists(weight_dir):
+        raise FileNotFoundError(f"No weights found in {weight_dir}")
     weight_list = os.listdir(weight_dir)
     path = sorted(weight_list, key=lambda x: x.split("-")[-1])[-1]
     print("Loading model from: ", path)
@@ -54,14 +82,25 @@ def load_model_weights(model: torch.nn.Module, weight_dir: str, device: str) -> 
 
 
 def eval_metrics_for_span_extraction(
-        pred_start: List[int], 
-        pred_end: List[int], 
-        start_positions: List[int],
-        end_positions: List[int]
+        pred_start: List[int], pred_end: List[int], 
+        start_positions: List[int], end_positions: List[int]
         ) -> Tuple[float, float, float]:
     """
     Calculate evaluation F1 metrics for span extraction tasks.
+    Args:
+        pred_start (List[int]): Predicted start positions.
+        pred_end (List[int]): Predicted end positions.
+        start_positions (List[int]): True start positions.
+        end_positions (List[int]): True end positions.
+    Returns:
+        Tuple[float, float, float]: A tuple containing the start F1 score, 
+        end F1 score, and joint F1 score.
+    Raises:
+        ValueError: If the lengths of the input lists do not match.
     """
+    if not (len(pred_start) == len(pred_end) == len(start_positions) == len(end_positions)):
+        raise ValueError("All input lists must have the same length.")
+    
     start_f1 = metrics.f1_score(
         start_positions, pred_start, average='micro',
         zero_division=0
@@ -70,12 +109,27 @@ def eval_metrics_for_span_extraction(
         end_positions, pred_end, average='micro',
         zero_division=0
     )
-    joint_f1 = np.mean((start_f1, end_f1))
+    joint_f1 = [
+        (pred_start[i] == start_positions[i] and
+         pred_end[i] == end_positions[i])
+        for i in range(len(pred_start))
+    ]
+    joint_f1 = sum(joint_f1) / len(joint_f1)
     return (round(start_f1, 4), round(end_f1, 4), round(joint_f1, 4))
 
 
-def evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, 
-                            device: str) -> Tuple[float, float, float, float, float]:
+def evaluation_fn(
+        model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, 
+        device: str) -> Tuple[float, float, float, float, float]:
+    """Evaluate the model on the given dataloader.
+    Args:
+        model (torch.nn.Module): The model to evaluate.
+        dataloader (torch.utils.data.DataLoader): The dataloader for evaluation.
+        device (str): The device to run the evaluation on ('cpu' or 'cuda').
+    Returns:
+        Tuple[float, float, float, float, float]: A tuple containing the loss, 
+        F1 score, precision, recall, and accuracy.
+    """
     with torch.no_grad():
         y_true, y_pred = [], []
         model.eval()
@@ -102,8 +156,18 @@ def evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.DataLoade
     return round(loss,4), round(f1,4), round(precision,4), round(recall,4), round(acc,4)
 
 
-def span_evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, 
-                    device: str) -> Tuple[float, float, float, float, float]:
+def span_evaluation_fn(
+        model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, 
+        device: str) -> Tuple[float, float, float, float, float]:
+    """Evaluate the model on the given dataloader for span extraction tasks.
+    Args:
+        model (torch.nn.Module): The model to evaluate.
+        dataloader (torch.utils.data.DataLoader): The dataloader for evaluation.
+        device (str): The device to run the evaluation on ('cpu' or 'cuda').
+    Returns:
+        Tuple[float, float, float, float, float]: A tuple containing the loss, 
+        start F1 score, end F1 score, joint F1 score, and accuracy.
+    """
     with torch.no_grad():
         start_true, start_pred = [], []
         end_true, end_pred = [], []
