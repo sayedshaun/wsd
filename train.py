@@ -6,7 +6,7 @@ from dataset import WSDDataset, SpanDataset
 from model import WSDModel, SpanExtractionModel
 from torch.utils.data import DataLoader
 import argparse
-from utils import get_tokenizer, trainable_params, seed_everything
+from utils import get_tokenizer, seed_everything
 from train_utils import train_fn, span_train_fn
 
 
@@ -23,19 +23,20 @@ def main(args: argparse.Namespace):
     assert args.batch_size > 0, "Batch size should be greater than 0"
     assert args.num_sense > 0, "Number of sense should be greater than 0"
     assert args.logging_step > 0, "Logging step should be greater than 0"
-    assert args.seed > 0, "Seed should be greater than 0"
     assert args.precision in ["fp16", "fp32", "bf16"], "Precision should be fp16, fp32 or bf16"
     assert args.device in ["cuda", "cpu"], "Device should be cuda or cpu"
-    assert args.architecture in ["span_extraction", "cosine_similarity"], (
-        "Architecture should be `span_extraction` or `cosine_similarity`"
+    assert args.architecture in ["span", "cosine"], (
+        "Architecture should be `span` or `cosine`"
     )
+    if isinstance(args.seed, str):
+        args.seed = None
     if args.precision == "fp16": args.precision = torch.float16
     if args.precision == "fp32": args.precision = torch.float32
     if args.precision == "bf16": args.precision = torch.bfloat16
 
     seed_everything(args.seed)
     tokenizer = get_tokenizer(args.model_name)
-    if args.architecture == "span_extraction":
+    if args.architecture == "span":
         train_dataset = SpanDataset(
             dataframe=DataBuilder(args.train_data_dir, args.pos, args.seed).to_pandas(), 
             tokenizer=tokenizer, max_seq_length=args.max_seq_len
