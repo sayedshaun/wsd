@@ -39,7 +39,7 @@ class WSDModel(torch.nn.Module):
         gloss_inputs:   torch.Tensor,    # [B, S, L]
         gloss_mask:     torch.Tensor,    # [B, S, L]
         target_word:    torch.Tensor,    # [B, W]
-        labels:         torch.Tensor=None
+        labels:         Union[torch.Tensor, None]=None
         ) -> ModelOutput:
         
         context_encoder = self.encoder(sentence_inputs, sentence_mask)
