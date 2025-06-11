@@ -4,7 +4,7 @@ import os
 import torch
 import random
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from sklearn import metrics
 from transformers import AutoTokenizer
 
@@ -25,7 +25,12 @@ def trainable_params(model: torch.nn.Module) -> int | float:
     return f"{params / 1e6:.2f}M"
 
 
-def seed_everything(seed: int):
+def seed_everything(seed: Union[int, None] = None) -> None:
+    """
+    Set random seed for reproducibility.
+    """
+    if seed is None:
+        return
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
@@ -36,6 +41,9 @@ def seed_everything(seed: int):
 
 
 def load_model_weights(model: torch.nn.Module, weight_dir: str, device: str) -> None:
+    """
+    Load model weights from the specified directory.
+    """
     weight_list = os.listdir(weight_dir)
     path = sorted(weight_list, key=lambda x: x.split("-")[-1])[-1]
     print("Loading model from: ", path)
