@@ -1,4 +1,5 @@
 import os
+from typing import Union
 import nltk
 import random
 import polars as pl
@@ -104,7 +105,7 @@ def generate(dir_path: str) -> pl.DataFrame:
 
 
 class DataBuilder(object):
-    def __init__(self, dir_path, pos: str = "ALL", seed: int = 42) -> None:
+    def __init__(self, dir_path, pos: str = "ALL", seed: Union[int, None]=None) -> None:
         self.dir_path = dir_path
         self.POS_MAP = {'NOUN': wn.NOUN, 'VERB': wn.VERB, 'ADJ':  wn.ADJ, 'ADV':  wn.ADV}
         self.pos = pos
@@ -125,8 +126,10 @@ class DataBuilder(object):
         df['sense_list'] = df.apply(lambda x: get_all_senses(x, self.POS_MAP), axis=1)
         df['correct_sense'] = df.apply(get_correct_sense, axis=1)
         df = df.apply(fill_empty_sense, axis=1)
-        random.seed(self.seed) 
-        df['sense_list'] = df['sense_list'].apply(lambda x: random.sample(x, len(x)))
+
+        if self.seed is not None:
+            random.seed(self.seed) 
+            df['sense_list'] = df['sense_list'].apply(lambda x: random.sample(x, len(x)))
         if self.pos == "verb":
             return df[df['target_pos'] == "VERB"].reset_index(drop=True)
         elif self.pos == "noun":
