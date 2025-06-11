@@ -53,7 +53,7 @@ def main(args: argparse.Namespace):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, required=True, help="Model name or path")
+    parser.add_argument("--model_name", type=str, required=True, help="..")
     parser.add_argument("--data_dir", type=str, required=True, help="Path to data directory")
     parser.add_argument("--weight_dir", type=str, required=True, help="Path to model weight directory")
     parser.add_argument("--pos", type=str, default="ALL", help="POS tag to use")
