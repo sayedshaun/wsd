@@ -62,7 +62,8 @@ def train_fn(
     scaler = torch.amp.GradScaler(enabled=torch.cuda.is_available())
     global_step = 1
     best_f1 = float('-inf')
-    with tqdm(total=total_steps, desc=f"Training | Params: {trainable_params(model)}") as pbar:
+    original_desc = f"Training | Params: {trainable_params(model)}"
+    with tqdm(total=total_steps, desc=original_desc) as pbar:
         for epoch in range(epochs):
             model.train()
             total_loss = 0.0
@@ -95,7 +96,7 @@ def train_fn(
                     t_p, t_r, t_f1, t_s = metrics.precision_recall_fscore_support(
                         train_y_true, train_y_pred, average='macro',zero_division=0)
                     train_y_true, train_y_pred = [], []
-                    prev_desc = pbar.desc
+                    prev_desc = original_desc
                     pbar.set_description("Evaluating...")
                     v_l, v_f1, v_p, v_r, v_a = evaluation_fn(model, val_dataloader, device)
                     pbar.set_postfix({'accuracy': v_a, 'precision': v_p, 'recall': v_r, 'f1': v_f1, 'best_f1': best_f1})
@@ -169,7 +170,8 @@ def span_train_fn(
     scaler = torch.amp.GradScaler(enabled=torch.cuda.is_available())
     global_step = 0
     best_f1 = float('-inf')
-    with tqdm(total=total_steps, desc=f"Training | Params: {trainable_params(model)}") as pbar:
+    original_desc = f"Training | Params: {trainable_params(model)}"
+    with tqdm(total=total_steps, desc=original_desc) as pbar:
         for epoch in range(epochs):
             model.train()
             total_loss = 0.0
@@ -210,7 +212,7 @@ def span_train_fn(
                     )
                     train_start_true, train_start_pred = [], []
                     train_end_true, train_end_pred = [], []
-                    prev_desc = pbar.desc
+                    prev_desc = original_desc
                     pbar.set_description("Evaluating...")
                     val_loss, v_start_f1, v_end_f1, v_joint_f1 = span_evaluation_fn(model, val_dataloader, device)
                     pbar.set_postfix({'start_f1': v_start_f1, 'end_f1': v_end_f1, 'joint_f1': v_joint_f1, 'best_f1': best_f1})
