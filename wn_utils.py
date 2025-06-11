@@ -27,6 +27,10 @@ def get_all_senses(row: pl.Series, pos_map: Optional[Dict[str, Any]] = None) -> 
 def get_correct_sense(row: pl.Series) -> Union[str, None]:
     """
     Return the correct sense for this row's lemma+POS.
+    Args:
+        row (pl.Series): A row from a DataFrame containing 'sense_key'.
+    Returns:
+        Union[str, None]: The definition of the correct sense or None.
     """
     if 'sense_key' in row and row['sense_key'] is not None and row['sense_key'] != '':
         lem = wn.lemma_from_key(row['sense_key'])
@@ -37,6 +41,11 @@ def get_correct_sense(row: pl.Series) -> Union[str, None]:
 def fill_empty_sense(row: pl.Series) -> pl.Series:
     """
     Fill empty sense_list with the first sense of the word.
+    Args:
+        row (pl.Series): A row from a DataFrame containing 'sentence', 
+                         'target_index_start', and 'sense_list'.
+    Returns:
+        pl.Series: The updated row with 'sense_list' filled.
     """
     if not row['sense_list']:
         word = row['sentence'].split()[row['target_index_start']]
