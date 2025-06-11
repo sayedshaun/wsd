@@ -42,12 +42,11 @@ def main(args: argparse.Namespace):
             max_seq_length=args.max_length
         )
         dataloader = DataLoader(ds, batch_size=args.batch_size, shuffle=False)
-        loss, start_accu, end_accu, joint_accu = span_evaluation_fn(model, dataloader, device)
+        loss, em, f1 = span_evaluation_fn(model, dataloader, device)
         print("=" * 50)
         print("Loss: ", loss)
-        print("Start Accuracy: ", start_accu)
-        print("End Accuracy: ", end_accu)
-        print("Joint Accuracy: ", joint_accu)
+        print("Exact Match: ", em)
+        print("F1: ", f1)
         print("=" * 50)
         
 
