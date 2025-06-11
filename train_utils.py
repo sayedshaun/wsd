@@ -204,7 +204,7 @@ def span_train_fn(
                 train_end_pred.extend(outputs.end_logits.argmax(dim=1).cpu().numpy())
                 # Logging
                 if global_step % logging_step == 0 and global_step > 0:
-                    em, f1 = eval_metrics_for_span_extraction(
+                    start_f1, end_f1, joint_f1 = eval_metrics_for_span_extraction(
                         pred_start=train_start_pred, 
                         pred_end=train_end_pred, 
                         start_positions=train_start_true, 
@@ -214,8 +214,8 @@ def span_train_fn(
                     train_end_true, train_end_pred = [], []
                     prev_desc = original_desc
                     pbar.set_description("Evaluating...")
-                    val_loss, em, f1 = span_evaluation_fn(model, val_dataloader, device)
-                    pbar.set_postfix({'exact_match': em, 'f1': f1, 'best_f1': best_f1})
+                    val_loss, v_start_f1, v_end_f1, v_joint_f1 = span_evaluation_fn(model, val_dataloader, device)
+                    pbar.set_postfix({'start_f1': v_start_f1, 'end_f1': v_end_f1, 'joint_f1': v_joint_f1, 'best_f1': best_f1})
                     pbar.set_description(prev_desc)
                     if report_to == 'wandb':
                         wandb.log(
@@ -223,19 +223,21 @@ def span_train_fn(
                                 'train/epoch': epoch,
                                 'train/global_step': global_step,
                                 'train/loss': total_loss / logging_step,
-                                'train/exact_match': em,
-                                'train/f1': f1,
+                                'train/start_f1': start_f1,
+                                'train/end_f1': end_f1,
+                                'train/joint_f1': joint_f1,
                                 'validation/loss': val_loss,
-                                'validation/exact_match': em,
-                                'validation/f1': f1,
+                                'validation/start_f1': v_start_f1,
+                                'validation/end_f1': v_end_f1,
+                                'validation/joint_f1': v_joint_f1,
                                 'validation/best_f1': best_f1
                             }
                         )
                     total_loss = 0.0
 
                     # Save checkpoints
-                    if f1 > best_f1:
-                        best_f1 = f1
+                    if v_joint_f1 > best_f1:
+                        best_f1 = v_joint_f1
                         torch.save(model.state_dict(), os.path.join(output_dir, f"step-{global_step}-f1-{best_f1}.pt"))
                         # Sorted by F1 score and keep 3 checkpoints
                         checkpoint_files = [f for f in os.listdir(output_dir) if f.endswith('.pt') and '-' in f]
