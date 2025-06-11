@@ -1,4 +1,5 @@
-train_data_dir: data/Training_Corpora/SemCor
+#train_data_dir: data/Training_Corpora/SemCor
+train_data_dir: data/Evaluation_Datasets/semeval2007
 val_data_dir: data/Evaluation_Datasets/semeval2007
 model_name: distilbert-base-uncased
 output_dir: output/semeval2007
@@ -14,7 +15,7 @@ warmup_ratio: 0.1
 grad_clip: 1.0
 pos: ALL
 device: cpu
-seed: 1234
+seed: none
 workers: 1
 report_to: none
-architecture: span_extraction
+architecture: span
