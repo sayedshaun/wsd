@@ -53,25 +53,45 @@ def load_model_weights(model: torch.nn.Module, weight_dir: str, device: str) -> 
     return model
 
 
+def compute_exact_match(pred_span: Tuple[int, int], gold_span: Tuple[int, int]) -> int:
+    return int(pred_span == gold_span)
+
+def compute_f1_span(pred_span: Tuple[int, int], gold_span: Tuple[int, int]) -> float:
+    pred_set = set(range(pred_span[0], pred_span[1] + 1))
+    gold_set = set(range(gold_span[0], gold_span[1] + 1))
+    if not pred_set or not gold_set:
+        return 0.0
+    overlap = pred_set & gold_set
+    if not overlap:
+        return 0.0
+    precision = len(overlap) / len(pred_set)
+    recall = len(overlap) / len(gold_set)
+    f1 = 2 * precision * recall / (precision + recall)
+    return f1
+
 def eval_metrics_for_span_extraction(
-        pred_start: List[int], 
-        pred_end: List[int], 
-        start_positions: List[int],
-        end_positions: List[int]
-        ) -> Tuple[float, float, float]:
+    pred_start: List[int], 
+    pred_end: List[int], 
+    start_positions: List[int],
+    end_positions: List[int]
+) -> Tuple[float, float]:
     """
-    Calculate evaluation F1 metrics for span extraction tasks.
+    Evaluate span extraction with span-level EM and F1.
     """
-    start_f1 = metrics.f1_score(
-        start_positions, pred_start, average='micro',
-        zero_division=0
-    )
-    end_f1 = metrics.f1_score(    
-        end_positions, pred_end, average='micro',
-        zero_division=0
-    )
-    joint_f1 = np.mean((start_f1, end_f1))
-    return (round(start_f1, 4), round(end_f1, 4), round(joint_f1, 4))
+    exact_matches = []
+    f1_scores = []
+
+    for ps, pe, gs, ge in zip(pred_start, pred_end, start_positions, end_positions):
+        pred_span = (ps, pe)
+        gold_span = (gs, ge)
+        exact_matches.append(compute_exact_match(pred_span, gold_span))
+        f1_scores.append(compute_f1_span(pred_span, gold_span))
+    
+    em = np.mean(exact_matches)
+    f1 = np.mean(f1_scores)
+
+    return round(em * 100, 2), round(f1 * 100, 2)
+
 
 
 def evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, 
@@ -103,7 +123,7 @@ def evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.DataLoade
 
 
 def span_evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, 
-                    device: str) -> Tuple[float, float, float, float, float]:
+                    device: str) -> Tuple[float, float, float]:
     with torch.no_grad():
         start_true, start_pred = [], []
         end_true, end_pred = [], []
@@ -122,7 +142,7 @@ def span_evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.Data
             total_loss += outputs.loss.item()
 
         loss = total_loss / len(dataloader)
-        start_acc, end_acc, joint_acc = eval_metrics_for_span_extraction(
+        em, f1 = eval_metrics_for_span_extraction(
             pred_start=start_pred, 
             pred_end=end_pred, 
             start_positions=start_true, 
@@ -131,4 +151,4 @@ def span_evaluation_fn(model: torch.nn.Module, dataloader: torch.utils.data.Data
         start_true, start_pred = [], []
         end_true, end_pred = [], []
         model.train()
-        return loss, start_acc, end_acc, joint_acc
+        return loss, em, f1
