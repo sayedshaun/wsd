@@ -44,21 +44,21 @@ train_data_dir: data/Training_Corpora/SemCor
 val_data_dir: data/Evaluation_Datasets/semeval2007
 model_name: distilbert-base-uncased
 output_dir: output/semeval2007
-num_sense: 5
-max_seq_len: 20
+num_sense: 5            # Recommended 4/5
+max_seq_len: 20         # Between [1, 512]
 batch_size: 1
 lr: 0.00001
 weight_decay: 0.01
 epochs: 3
 logging_step: 10
-precision: fp16
+precision: fp16         # [fp16, fp32, bf16]
 warmup_ratio: 0.1
 grad_clip: 1.0
-pos_tag: ALL
-device: cpu
-seed: 1234
-report_to: wandb
-architecture: span_extraction
+pos_tag: ALL            # [ALL, NOUN, VERB, ADJ, ADV]
+device: cpu             # [cpu, cuda]
+seed: 1234              # [int,  none]
+report_to: wandb        # [wandb, none]
+architecture: span      # [span, cosine]
 ```
 
 ## Evaluation
