@@ -70,7 +70,7 @@ python predict.py --data_dir "data/Evaluation_Datasets/semeval2015" \
                   --num_sense 5 \
                   --max_length 256 \
                   --batch_size 32 \
-                  --architecture "span_extraction"
+                  --architecture "span"
 ```
 
 ## Dataset Details
