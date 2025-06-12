@@ -1,4 +1,6 @@
 import os
+import glob
+import json
 import yaml
 import shutil
 import torch
@@ -9,7 +11,7 @@ from data_builder import DataBuilder
 from dataset import WSDDataset, SpanDataset
 from model import WSDModel, SpanExtractionModel
 from torch.utils.data import DataLoader
-from utils import get_tokenizer, seed_everything
+from utils import get_tokenizer, seed_everything, plot_line
 from train_utils import train_fn, span_train_fn
 
 
@@ -36,7 +38,8 @@ def main(args: argparse.Namespace):
     if args.precision == "fp16": args.precision = torch.float16
     if args.precision == "fp32": args.precision = torch.float32
     if args.precision == "bf16": args.precision = torch.bfloat16
-
+    if os.path.exists(args.output_dir):
+        shutil.rmtree(args.output_dir)
     os.makedirs(args.output_dir, exist_ok=True)
     shutil.copyfile(config_file, os.path.join(args.output_dir, "config.yaml"))
     seed_everything(args.seed)
@@ -134,6 +137,27 @@ def main(args: argparse.Namespace):
         subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semeval2015"))
         subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/senseval2"))
         subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/senseval3"))
+
+        # Merge all prediction results into a single file
+        json_files = glob.glob(os.path.join(args.output_dir, "*.json"))
+        dataset_names = [os.path.splitext(os.path.basename(f))[0] for f in json_files]
+        output_dir = args.output_dir
+        all_metrics = {}
+
+        for dataset in dataset_names:
+            json_path = os.path.join(output_dir, f"{dataset}.json")
+            if os.path.exists(json_path):
+                with open(json_path, "r") as f:
+                    all_metrics[dataset] = json.load(f)
+            else:
+                raise FileNotFoundError(f"Metrics file for {dataset} not found at {json_path}")
+        metrics_path = os.path.join(output_dir, "metrics.json")
+        with open(metrics_path, "w") as f:
+            json.dump(all_metrics, f, indent=4)
+        # Plot the metrics
+        plot_line(metrics_path, os.path.join(output_dir, "metrics.png"))
+
+
 
 
 parser = argparse.ArgumentParser(description="Word Sense Disambiguation")
