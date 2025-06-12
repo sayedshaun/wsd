@@ -1,7 +1,10 @@
 import nltk
 import polars as pl
 from nltk.corpus import wordnet as wn
-nltk.download('wordnet', quiet=True)
+try:
+    nltk.download('wordnet', quiet=True)
+except Exception as e:
+    print(f"Error downloading WordNet: {e}")
 from typing import Optional, Dict, Any, List, Union
 
 
