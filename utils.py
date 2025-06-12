@@ -4,6 +4,8 @@ import os
 import torch
 import random
 import numpy as np
+import json
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 from typing import List, Tuple, Union
 from sklearn import metrics
@@ -206,3 +208,33 @@ def span_evaluation_fn(
         end_true, end_pred = [], []
         model.train()
         return loss, start_acc, end_acc, joint_acc
+    
+
+def plot_line(json_path: str, save_path: str = None):
+    """
+    Creates a single line plot containing all numeric metrics across datasets.
+    
+    Args:
+        json_path (str): Path to the metrics.json file.
+        save_path (str, optional): If provided, saves the figure to this path.
+    """
+    with open(json_path, "r") as f:
+        data = json.load(f)
+
+    datasets = list(data.keys())
+    sample_entry = next(iter(data.values()))
+    metric_keys = [k for k, v in sample_entry.items() if isinstance(v, (int, float))]
+    metric_series = {metric: [data[ds][metric] for ds in datasets] for metric in metric_keys}
+
+    plt.figure(figsize=(10, 5))
+    for metric, values in metric_series.items():
+        plt.plot(datasets, values, marker="o", label=metric)
+
+    plt.title("Metrics Across Datasets")
+    plt.xlabel("Dataset")
+    plt.ylabel("Metric Value")
+    plt.ylim(0, max(max(vals) for vals in metric_series.values()) * 1.1)
+    plt.grid(True, linestyle="--", alpha=0.6)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(save_path)
