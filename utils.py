@@ -4,6 +4,7 @@ import os
 import torch
 import random
 import numpy as np
+from tqdm import tqdm
 from typing import List, Tuple, Union
 from sklearn import metrics
 from transformers import AutoTokenizer
@@ -58,27 +59,35 @@ def seed_everything(seed: Union[int, None] = None) -> None:
     torch.backends.cudnn.benchmark = True
 
 
-def load_model_weights(model: torch.nn.Module, weight_dir: str, device: str) -> None:
+def load_model_weights(model: torch.nn.Module, weight_dir: str, device: str) -> torch.nn.Module:
     """
-    Load model weights from the specified directory.
+    Load model weights from the specified directory. 
     Args:
-        model (torch.nn.Module): The model to load weights into.
-        weight_dir (str): Directory containing the model weights.
-        device (str): Device to load the model on ('cpu' or 'cuda').
+        model (torch.nn.Module): The model to load the weights into.
+        weight_dir (str): The directory containing the model weights.
+        device (str): The device to load the model onto ('cpu' or 'cuda').
     Returns:
-        None
+        torch.nn.Module: The model with loaded weights.
     Raises:
-        FileNotFoundError: If no weights are found in the specified directory.
+        FileNotFoundError: If the weight directory does not exist or contains no valid weights.
+    Raises:
+        ValueError: If the weight directory is empty or contains no valid model weights.
     """
     if not os.path.exists(weight_dir):
         raise FileNotFoundError(f"No weights found in {weight_dir}")
-    weight_list = os.listdir(weight_dir)
+    
+    weight_list = [f for f in os.listdir(weight_dir) if f.endswith((".pt", ".bin", ".ckpt"))]
+    if not weight_list:
+        raise FileNotFoundError(f"No valid model weights (.pt/.bin/.ckpt) found in {weight_dir}")
+    
     path = sorted(weight_list, key=lambda x: x.split("-")[-1])[-1]
-    print("Loading model from: ", path)
-    state_dict = torch.load(os.path.join(weight_dir, path), map_location=device)
+    full_path = os.path.join(weight_dir, path)
+    print("Loading model from:", full_path)
+    state_dict = torch.load(full_path, map_location=device)
     model.load_state_dict(state_dict)
     model.eval()
     return model
+
 
 
 def eval_metrics_for_span_extraction(
@@ -120,7 +129,8 @@ def eval_metrics_for_span_extraction(
 
 def evaluation_fn(
         model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, 
-        device: str) -> Tuple[float, float, float, float, float]:
+        device: str, disable_tqdm_bar: bool = True
+        ) -> Tuple[float, float, float, float, float]:
     """Evaluate the model on the given dataloader.
     Args:
         model (torch.nn.Module): The model to evaluate.
@@ -134,7 +144,7 @@ def evaluation_fn(
         y_true, y_pred = [], []
         model.eval()
         total_loss = 0.0
-        for batch in dataloader:
+        for batch in tqdm(dataloader, disable=disable_tqdm_bar):
             batch = {
                 k: (v.to(device) if isinstance(v, torch.Tensor)
                 else [g.to(device) for g in v]) for k, v in batch.items()
@@ -147,9 +157,8 @@ def evaluation_fn(
 
         loss = total_loss / len(dataloader)
         precision, recall, f1, support = metrics.precision_recall_fscore_support(
-            y_true, y_pred, average='macro', zero_division=0)
+            y_true, y_pred, average='micro', zero_division=0)
         acc = metrics.accuracy_score(y_true, y_pred)
-        print(metrics.classification_report(y_true, y_pred, zero_division=0))
         y_true, y_pred = [], []
         model.train()
 
@@ -158,7 +167,8 @@ def evaluation_fn(
 
 def span_evaluation_fn(
         model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, 
-        device: str) -> Tuple[float, float, float, float, float]:
+        device: str,  disable_tqdm_bar: bool = True
+        ) -> Tuple[float, float, float, float, float]:
     """Evaluate the model on the given dataloader for span extraction tasks.
     Args:
         model (torch.nn.Module): The model to evaluate.
@@ -173,7 +183,7 @@ def span_evaluation_fn(
         end_true, end_pred = [], []
         model.eval()
         total_loss = 0.0
-        for batch in dataloader:
+        for batch in tqdm(dataloader, disable=disable_tqdm_bar):
             batch = {
                 k: (v.to(device) if isinstance(v, torch.Tensor)
                 else [g.to(device) for g in v]) for k, v in batch.items()
