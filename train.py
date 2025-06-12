@@ -132,7 +132,7 @@ def main(args: argparse.Namespace):
             if args.seed is not None:
                 predict_args += ["--seed", str(args.seed)]
             return predict_args
-        subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semcor2007"))
+        subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semeval2007"))
         subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semeval2013"))
         subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semeval2015"))
         subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/senseval2"))
