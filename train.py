@@ -154,15 +154,8 @@ def main(args: argparse.Namespace):
         metrics_path = os.path.join(output_dir, "metrics.json")
         with open(metrics_path, "w") as f:
             json.dump(all_metrics, f, indent=4)
-
-        # Remove individual dataset metrics files
-        for json_file in json_files:
-            os.remove(json_file)
         # Plot the metrics
         plot_line(metrics_path, os.path.join(output_dir, "metrics.png"))
-
-
-
 
 
 parser = argparse.ArgumentParser(description="Word Sense Disambiguation")
