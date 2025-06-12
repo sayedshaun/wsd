@@ -18,3 +18,4 @@ seed: none
 workers: 1
 report_to: none
 architecture: span
+do_predict: true
