@@ -42,25 +42,26 @@ python train.py -c config.yaml
 ```
 with following configations
 ```yaml
-train_data_dir: data/Training_Corpora/SemCor
-val_data_dir: data/Evaluation_Datasets/semeval2007
-model_name: distilbert-base-uncased
-output_dir: output/semeval2007
-num_sense: 5            # Recommended 4/5
-max_seq_len: 20         # Between [1, 512]
-batch_size: 1
-lr: 0.00001
-weight_decay: 0.01
-epochs: 3
-logging_step: 10
-precision: fp16         # [fp16, fp32, bf16]
-warmup_ratio: 0.1
-grad_clip: 1.0
-pos_tag: ALL            # [ALL, NOUN, VERB, ADJ, ADV]
-device: cpu             # [cpu, cuda]
-seed: 1234              # [int,  none]
-report_to: wandb        # [wandb, none]
-architecture: span      # [span, cosine]
+train_data_dir: data/Training_Corpora/SemCor        # Training dataset dir
+val_data_dir: data/Evaluation_Datasets/semeval2007  # Validation dataset dir
+model_name: distilbert-base-uncased                 # Huggingface model name
+output_dir: output                                  # output directory to save checkpoints
+num_sense: 5                                        # Recommended 4/5
+max_seq_len: 20                                     # Between [1, 512]
+batch_size: 1                                       # Batch size for training
+lr: 0.00001                                         # Learning rate
+weight_decay: 0.01                                  # Weight decay for optimizer
+epochs: 3                                           # Number of epochs
+logging_step: 10                                    # After how many steps to log
+precision: fp16                                     # [fp16, fp32, bf16]
+warmup_ratio: 0.1                                   # After how many steps to warmup
+grad_clip: 1.0                                      # Gradient clipping factor
+pos_tag: ALL                                        # [ALL, NOUN, VERB, ADJ, ADV]
+device: cpu                                         # [cpu, cuda]
+seed: 1234                                          # [int,  none]
+report_to: wandb                                    # [wandb, none]
+architecture: span                                  # [span, cosine]
+do_predict: true                                    # predict after training
 ```
 
 ## Evaluation
@@ -69,10 +70,11 @@ python predict.py --data_dir "data/Evaluation_Datasets/semeval2015" \
                   --model_name "distilbert-base-uncased" \
                   --weight_dir "output/semeval2007" \
                   --pos "ALL" \
+                  --seed 1234 \
                   --num_sense 5 \
                   --max_length 256 \
                   --batch_size 32 \
-                  --architecture "span"
+                  --architecture "cosine"
 ```
 
 ## Dataset Details
