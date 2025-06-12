@@ -1,11 +1,14 @@
 import os
 import yaml
+import shutil
 import torch
+import argparse
+import subprocess
+from typing import List
 from data_builder import DataBuilder
 from dataset import WSDDataset, SpanDataset
 from model import WSDModel, SpanExtractionModel
 from torch.utils.data import DataLoader
-import argparse
 from utils import get_tokenizer, seed_everything
 from train_utils import train_fn, span_train_fn
 
@@ -34,8 +37,11 @@ def main(args: argparse.Namespace):
     if args.precision == "fp32": args.precision = torch.float32
     if args.precision == "bf16": args.precision = torch.bfloat16
 
+    os.makedirs(args.output_dir, exist_ok=True)
+    shutil.copyfile(config_file, os.path.join(args.output_dir, "config.yaml"))
     seed_everything(args.seed)
     tokenizer = get_tokenizer(args.model_name)
+
     if args.architecture == "span":
         train_dataset = SpanDataset(
             dataframe=DataBuilder(args.train_data_dir, args.pos, args.seed).to_pandas(), 
@@ -88,7 +94,7 @@ def main(args: argparse.Namespace):
             dataset=val_dataset, batch_size=args.batch_size, shuffle=False, 
             pin_memory=(args.device == "cuda"), num_workers= args.workers
         )
-        model = WSDModel(model_name=args.model_name, tokenizer=tokenizer)
+        model = WSDModel(model_name=args.model_name, tokenizer=tokenizer, n_sense=args.num_sense)
 
         train_fn(
             model=model, 
@@ -106,10 +112,35 @@ def main(args: argparse.Namespace):
             grad_clip=args.grad_clip
         )
 
+    if args.do_predict:
+        def build_predict_args(args: argparse.Namespace, data_dir: str) -> List[str]:
+            predict_args = [
+                "python", "predict.py",
+                "--data_dir", data_dir,
+                "--model_name", args.model_name,
+                "--output_dir", args.output_dir,
+                "--weight_dir", args.output_dir,
+                "--pos", args.pos,
+                "--num_sense", str(args.num_sense),
+                "--max_length", str(args.max_seq_len),
+                "--batch_size", str(args.batch_size),
+                "--architecture", args.architecture
+            ]
+            if args.seed is not None:
+                predict_args += ["--seed", str(args.seed)]
+            return predict_args
+
+        subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semeval2013"))
+        subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semeval2015"))
+        subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/senseval2"))
+        subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/senseval3"))
+
+
 parser = argparse.ArgumentParser(description="Word Sense Disambiguation")
 parser.add_argument("-c", type=str, required=True, help="Config file path")
 args = parser.parse_args()
-config = yaml.safe_load(open("config.yaml"))
+config_file = args.c 
+config = yaml.safe_load(open(config_file, "r", encoding="utf-8"))
 args = argparse.Namespace(**config)
 
 
