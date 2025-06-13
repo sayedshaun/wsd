@@ -213,42 +213,34 @@ def span_evaluation_fn(
         return loss, start_f1, end_f1, joint_f1, em
     
 
-def plot_metrics(json_path: str, save_path: str = None):
+def plot_metrics(json_path: str, save_path: str = None) -> None:
     """
     Creates a single line plot containing all numeric metrics across datasets.
     Args:
         json_path (str): Path to the metrics.json file.
         save_path (str, optional): If provided, saves the figure to this path.
     """
-    with open(json_path, "r") as f:
-        data = json.load(f)
-
-    datasets = list(data.keys())
-    sample_entry = next(iter(data.values()))
-    metric_keys = [k for k, v in sample_entry.items() if isinstance(v, (int, float))]
-    metric_series = {metric: [data[ds][metric] for ds in datasets] for metric in metric_keys}
-
+    df = pd.read_json(json_path)
+    # Keep only numeric columns
+    df_numeric = df.select_dtypes(include=[np.number])
+    if df_numeric.empty:
+        print("No numeric metrics to plot.")
+        return
     plt.figure(figsize=(10, 4))
-    for metric, values in metric_series.items():
-        plt.plot(datasets, values, marker="o", label=metric)
-
-    plt.title("Metrics Across Datasets")
-    plt.xlabel("Dataset")
-    plt.ylabel("Metric Value")
-    plt.ylim(0, max(max(vals) for vals in metric_series.values()) * 1.1)
-    plt.grid(True, linestyle="--", alpha=0.6)
-    plt.legend()
+    ax = df_numeric.plot(
+        marker='o',
+        title="Metrics Across Datasets"
+    )
+    ax.set_xlabel("Dataset")
+    ax.set_ylabel("Value")
     plt.tight_layout()
-    plt.savefig(f"{save_path}/line.png")
+    plt.savefig(f"{save_path}/line.png", dpi=300)
 
     # Heatmap
-    df = pd.read_json("output/metrics.json")
-    metrics_to_plot = ['f1', 'precision', 'recall', 'accuracy']
-    df_heatmap = df.loc[metrics_to_plot].astype(float)
     plt.figure(figsize=(10, 4))
-    sns.heatmap(df_heatmap, annot=True, cmap="YlGnBu", cbar_kws={'label': 'Value'})
+    sns.heatmap(df_numeric.T, annot=True, cmap="YlGnBu", cbar_kws={'label': 'Value'})
     plt.title("Heatmap of Metrics across Datasets")
     plt.xlabel("Dataset")
     plt.ylabel("Metric")
     plt.tight_layout()
-    plt.savefig(f"{save_path}/heatmap.png")
+    plt.savefig(f"{save_path}/heatmap.png", dpi=300)
