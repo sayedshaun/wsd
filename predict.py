@@ -33,7 +33,8 @@ def main(args: argparse.Namespace):
             "recall": recall,
             "accuracy": acc,
             "pos": args.pos,
-            "architecture": args.architecture
+            "architecture": args.architecture,
+            "dataset": args.data_dir.split('/')[-1]
         }
         print(report)
         output_filename = f"{args.data_dir.split('/')[-1]}.json"
