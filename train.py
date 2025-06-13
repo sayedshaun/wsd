@@ -8,6 +8,7 @@ import shutil
 import torch
 import argparse
 import subprocess
+import pandas as pd
 from typing import List
 from data_builder import DataBuilder
 from dataset import WSDDataset, SpanDataset
@@ -128,11 +129,9 @@ def main(args: argparse.Namespace):
             warmup_ratio=args.warmup_ratio,
             grad_clip=args.grad_clip
         )
-    if args.report_to == "wandb":
-        wandb.finish()
 
     if args.do_predict:
-        def build_predict_args(args: argparse.Namespace, data_dir: str) -> List[str]:
+        def build_predict_args(args: argparse.Namespace, data_dir: str, pos: str) -> List[str]:
             predict_args = [
                 "python", "predict.py",
                 "--data_dir", data_dir,
@@ -172,6 +171,12 @@ def main(args: argparse.Namespace):
             json.dump(all_metrics, f, indent=4)
         # Plot the metrics
         plot_line(metrics_path, os.path.join(output_dir, "metrics.png"))
+        if args.report_to == "wandb":
+            metrics_df = pd.DataFrame.from_dict(all_metrics, orient="index")
+            metrics_df.index.name = "dataset"
+            metrics_df.reset_index(inplace=True) 
+            wandb.log({"test/Table": wandb.Table(dataframe=metrics_df)})
+            wandb.finish()
 
 
 parser = argparse.ArgumentParser(description="Word Sense Disambiguation")
