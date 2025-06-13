@@ -131,7 +131,7 @@ def main(args: argparse.Namespace):
         )
 
     if args.do_predict:
-        def build_predict_args(args: argparse.Namespace, data_dir: str, pos: str) -> List[str]:
+        def build_predict_args(args: argparse.Namespace, data_dir: str) -> List[str]:
             predict_args = [
                 "python", "predict.py",
                 "--data_dir", data_dir,
