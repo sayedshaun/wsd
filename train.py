@@ -147,6 +147,7 @@ def main(args: argparse.Namespace):
             if args.seed is not None:
                 predict_args += ["--seed", str(args.seed)]
             return predict_args
+        
         subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semeval2007"))
         subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semeval2013"))
         subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semeval2015"))
@@ -172,7 +173,12 @@ def main(args: argparse.Namespace):
         # Plot the metrics
         plot_metrics(metrics_path, save_path=output_dir)
         if args.report_to == "wandb":
-            wandb.log({"Heatmap": wandb.Image(os.path.join(output_dir, "heatmap.png"))})
+            wandb.log(
+                {
+                    "test/heatmap": wandb.Image(os.path.join(output_dir, "heatmap.png")),
+                    "test/line": wandb.Image(os.path.join(output_dir, "line.png")),
+                }
+            )
             wandb.finish()
 
 
