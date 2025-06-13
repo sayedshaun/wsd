@@ -92,7 +92,7 @@ def train_fn(
                 if global_step % logging_step == 0 and global_step > 0:
                     train_accu = metrics.accuracy_score(train_y_true, train_y_pred)
                     t_p, t_r, t_f1, t_s = metrics.precision_recall_fscore_support(
-                        train_y_true, train_y_pred, average='macro',zero_division=0)
+                        train_y_true, train_y_pred, average='micro',zero_division=0)
                     train_y_true, train_y_pred = [], []
                     prev_desc = original_desc
                     pbar.set_description("Evaluating::")
@@ -103,12 +103,12 @@ def train_fn(
                         wandb.log(
                             {
                                 'train/epoch': epoch,
-                                'train/global_step': global_step,
-                                'train/loss': total_loss / logging_step,
-                                'train/accuracy': train_accu,
-                                'train/f1': t_f1,
-                                'train/precision': t_p,
-                                'train/recall': t_r,
+                                'train/global_step': round(global_step, 4),
+                                'train/loss': round(total_loss / logging_step, 4),
+                                'train/accuracy': round(train_accu, 4),
+                                'train/f1': round(t_f1, 4),
+                                'train/precision': round(t_p, 4),
+                                'train/recall': round(t_r, 4),
                                 'validation/loss': v_l,
                                 'validation/precision': v_p,
                                 'validation/recall': v_r,
