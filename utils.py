@@ -95,7 +95,7 @@ def load_model_weights(model: torch.nn.Module, weight_dir: str, device: str) -> 
 def eval_metrics_for_span_extraction(
         pred_start: List[int], pred_end: List[int], 
         start_positions: List[int], end_positions: List[int]
-        ) -> Tuple[float, float, float]:
+        ) -> Tuple[float, float, float, float]:
     """
     Calculate evaluation F1 metrics for span extraction tasks.
     Args:
@@ -120,13 +120,14 @@ def eval_metrics_for_span_extraction(
         end_positions, pred_end, average='micro',
         zero_division=0
     )
-    joint_f1 = [
+    exact_match = [
         (pred_start[i] == start_positions[i] and
          pred_end[i] == end_positions[i])
         for i in range(len(pred_start))
     ]
-    joint_f1 = sum(joint_f1) / len(joint_f1)
-    return (round(start_f1, 4), round(end_f1, 4), round(joint_f1, 4))
+    em = sum(exact_match) / len(exact_match)
+    joint_f1 = np.mean([start_f1, end_f1, em])
+    return (round(start_f1, 4), round(end_f1, 4), round(joint_f1, 4)), round(em, 4)
 
 
 def evaluation_fn(
@@ -198,7 +199,7 @@ def span_evaluation_fn(
             total_loss += outputs.loss.item()
 
         loss = total_loss / len(dataloader)
-        start_acc, end_acc, joint_acc = eval_metrics_for_span_extraction(
+        start_f1, end_f1, joint_f1, em = eval_metrics_for_span_extraction(
             pred_start=start_pred, 
             pred_end=end_pred, 
             start_positions=start_true, 
@@ -207,13 +208,12 @@ def span_evaluation_fn(
         start_true, start_pred = [], []
         end_true, end_pred = [], []
         model.train()
-        return loss, start_acc, end_acc, joint_acc
+        return loss, start_f1, end_f1, joint_f1, em
     
 
 def plot_line(json_path: str, save_path: str = None):
     """
     Creates a single line plot containing all numeric metrics across datasets.
-    
     Args:
         json_path (str): Path to the metrics.json file.
         save_path (str, optional): If provided, saves the figure to this path.
