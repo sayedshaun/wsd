@@ -2,6 +2,8 @@ import os
 import glob
 import json
 import yaml
+import datetime
+import wandb
 import shutil
 import torch
 import argparse
@@ -44,6 +46,14 @@ def main(args: argparse.Namespace):
     shutil.copyfile(config_file, os.path.join(args.output_dir, "config.yaml"))
     seed_everything(args.seed)
     tokenizer = get_tokenizer(args.model_name)
+
+    if args.report_to == "wandb":
+        wandb.init(
+            project="wsd",
+            name=f"{args.architecture}_{args.model_name}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
+            config=vars(args),
+            dir=args.output_dir,
+        )
 
     if args.architecture == "span":
         train_dataset = SpanDataset(
@@ -114,6 +124,8 @@ def main(args: argparse.Namespace):
             warmup_ratio=args.warmup_ratio,
             grad_clip=args.grad_clip
         )
+    if args.report_to == "wandb":
+        wandb.finish()
 
     if args.do_predict:
         def build_predict_args(args: argparse.Namespace, data_dir: str) -> List[str]:
