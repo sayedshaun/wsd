@@ -14,7 +14,7 @@ from data_builder import DataBuilder
 from dataset import WSDDataset, SpanDataset
 from model import WSDModel, SpanExtractionModel
 from torch.utils.data import DataLoader
-from utils import get_tokenizer, seed_everything, plot_line
+from utils import get_tokenizer, seed_everything, plot_metrics
 from train_utils import train_fn, span_train_fn
 
 
@@ -170,12 +170,9 @@ def main(args: argparse.Namespace):
         with open(metrics_path, "w") as f:
             json.dump(all_metrics, f, indent=4)
         # Plot the metrics
-        plot_line(metrics_path, os.path.join(output_dir, "metrics.png"))
+        plot_metrics(metrics_path, save_path=output_dir)
         if args.report_to == "wandb":
-            metrics_df = pd.DataFrame.from_dict(all_metrics, orient="index")
-            metrics_df.index.name = "dataset"
-            metrics_df.reset_index(inplace=True) 
-            wandb.log({"test/Table": wandb.Table(dataframe=metrics_df)})
+            wandb.log({"Heatmap": wandb.Image(os.path.join(output_dir, "heatmap.png"))})
             wandb.finish()
 
 
