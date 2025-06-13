@@ -50,8 +50,6 @@ def train_fn(
         output_dir: str = 'output',
         report_to: str = None
     ) -> None:
-    if report_to == 'wandb':
-        wandb.init(project='wsd', name=output_dir)
     os.makedirs(output_dir, exist_ok=True)
     model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -137,8 +135,6 @@ def train_fn(
 
                 global_step += 1
                 pbar.update(1)
-    if report_to == 'wandb':
-        wandb.finish()
 
 
 @add_docstring
@@ -157,9 +153,6 @@ def span_train_fn(
         output_dir: str = 'output',
         report_to: str = None
     ) -> None:
-
-    if report_to == 'wandb':
-        wandb.init(project='wsd', name=output_dir)
     os.makedirs(output_dir, exist_ok=True)
     model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -253,5 +246,3 @@ def span_train_fn(
 
                 global_step += 1
                 pbar.update(1)
-    if report_to == 'wandb':
-        wandb.finish()
