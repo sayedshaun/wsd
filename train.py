@@ -47,11 +47,11 @@ def main(args: argparse.Namespace):
     shutil.copyfile(config_file, os.path.join(args.output_dir, "config.yaml"))
     seed_everything(args.seed)
     tokenizer = get_tokenizer(args.model_name)
-
+    
     if args.report_to == "wandb":
         wandb.init(
             project="wsd",
-            name=f"{args.architecture}_{args.model_name}_{datetime.datetime.now().strftime('%d-%m-%Y')}",
+            name=f"{args.architecture}-{args.model_name.split('/')[-1]}-{datetime.datetime.now().strftime('%d-%m-%Y')}",
             config=vars(args),
             dir=args.output_dir,
         )
