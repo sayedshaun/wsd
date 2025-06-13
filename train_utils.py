@@ -204,7 +204,7 @@ def span_train_fn(
                 train_end_pred.extend(outputs.end_logits.argmax(dim=1).cpu().numpy())
                 # Logging
                 if global_step % logging_step == 0 and global_step > 0:
-                    start_f1, end_f1, joint_f1 = eval_metrics_for_span_extraction(
+                    start_f1, end_f1, joint_f1, em = eval_metrics_for_span_extraction(
                         pred_start=train_start_pred, 
                         pred_end=train_end_pred, 
                         start_positions=train_start_true, 
@@ -214,8 +214,8 @@ def span_train_fn(
                     train_end_true, train_end_pred = [], []
                     prev_desc = original_desc
                     pbar.set_description("Evaluating::")
-                    val_loss, v_start_f1, v_end_f1, v_joint_f1 = span_evaluation_fn(model, val_dataloader, device)
-                    pbar.set_postfix({'start_f1': v_start_f1, 'end_f1': v_end_f1, 'joint_f1': v_joint_f1, 'best_f1': best_f1})
+                    val_loss, v_start_f1, v_end_f1, v_joint_f1, v_em = span_evaluation_fn(model, val_dataloader, device)
+                    pbar.set_postfix({'start_f1': v_start_f1, 'end_f1': v_end_f1, 'joint_f1': v_joint_f1, 'em': v_em})
                     pbar.set_description(prev_desc)
                     if report_to == 'wandb':
                         wandb.log(
@@ -226,10 +226,12 @@ def span_train_fn(
                                 'train/start_f1': start_f1,
                                 'train/end_f1': end_f1,
                                 'train/joint_f1': joint_f1,
+                                'train/exact_match': em,
                                 'validation/loss': val_loss,
                                 'validation/start_f1': v_start_f1,
                                 'validation/end_f1': v_end_f1,
                                 'validation/joint_f1': v_joint_f1,
+                                'validation/exact_match': v_em,
                                 'validation/best_f1': best_f1
                             }
                         )
