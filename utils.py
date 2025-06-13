@@ -127,7 +127,7 @@ def eval_metrics_for_span_extraction(
     ]
     em = sum(exact_match) / len(exact_match)
     joint_f1 = np.mean([start_f1, end_f1, em])
-    return (round(start_f1, 4), round(end_f1, 4), round(joint_f1, 4)), round(em, 4)
+    return round(start_f1, 4), round(end_f1, 4), round(joint_f1, 4), round(em, 4)
 
 
 def evaluation_fn(
