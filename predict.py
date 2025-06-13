@@ -56,7 +56,8 @@ def main(args: argparse.Namespace):
             "exact_match": em,
             "joint_f1": joint_f1,
             "pos": args.pos,
-            "architecture": args.architecture
+            "architecture": args.architecture,
+            "dataset": args.data_dir.split('/')[-1]
         }
         print(report)
         output_filename = f"{args.data_dir.split('/')[-1]}.json"
