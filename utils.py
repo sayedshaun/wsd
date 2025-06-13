@@ -228,7 +228,7 @@ def plot_metrics(json_path: str, save_path: str = None):
     metric_keys = [k for k, v in sample_entry.items() if isinstance(v, (int, float))]
     metric_series = {metric: [data[ds][metric] for ds in datasets] for metric in metric_keys}
 
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(10, 4))
     for metric, values in metric_series.items():
         plt.plot(datasets, values, marker="o", label=metric)
 
