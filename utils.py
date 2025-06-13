@@ -1,10 +1,12 @@
 # Copyright (c) 2025, Sayed Shaun.  All rights reserved.
 
 import os
+import json
 import torch
 import random
 import numpy as np
-import json
+import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from typing import List, Tuple, Union
@@ -211,7 +213,7 @@ def span_evaluation_fn(
         return loss, start_f1, end_f1, joint_f1, em
     
 
-def plot_line(json_path: str, save_path: str = None):
+def plot_metrics(json_path: str, save_path: str = None):
     """
     Creates a single line plot containing all numeric metrics across datasets.
     Args:
@@ -237,4 +239,16 @@ def plot_line(json_path: str, save_path: str = None):
     plt.grid(True, linestyle="--", alpha=0.6)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(save_path)
+    plt.savefig(f"{save_path}/line.png")
+
+    # Heatmap
+    df = pd.read_json("output/metrics.json")
+    metrics_to_plot = ['f1', 'precision', 'recall', 'accuracy']
+    df_heatmap = df.loc[metrics_to_plot].astype(float)
+    plt.figure(figsize=(10, 4))
+    sns.heatmap(df_heatmap, annot=True, cmap="YlGnBu", cbar_kws={'label': 'Value'})
+    plt.title("Heatmap of Metrics across Datasets")
+    plt.xlabel("Dataset")
+    plt.ylabel("Metric")
+    plt.tight_layout()
+    plt.savefig(f"{save_path}/heatmap.png")
