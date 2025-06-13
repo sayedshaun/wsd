@@ -22,7 +22,6 @@ if not os.path.exists("data/Training_Corpora") and not os.path.exists("data/Eval
     os.system("bash download.sh")
 
 
-
 def main(args: argparse.Namespace):
     # Some assertions to check if the arguments are valid
     assert args.epochs > 0, "Epochs should be greater than 0"
@@ -147,12 +146,12 @@ def main(args: argparse.Namespace):
             if args.seed is not None:
                 predict_args += ["--seed", str(args.seed)]
             return predict_args
-        
-        subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semeval2007"))
-        subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semeval2013"))
-        subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/semeval2015"))
-        subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/senseval2"))
-        subprocess.run(build_predict_args(args, "data/Evaluation_Datasets/senseval3"))
+
+        all_dirs = sorted(glob.glob(os.path.join("data", "Evaluation_Datasets", "*")))
+        all_dirs = [d for d in all_dirs if os.path.isdir(d)]
+        for data_dir in all_dirs:
+            print(f"Predicting for {data_dir}")
+            subprocess.run(build_predict_args(args, data_dir))
 
         # Merge all prediction results into a single file
         json_files = glob.glob(os.path.join(args.output_dir, "*.json"))
