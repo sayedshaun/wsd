@@ -3,7 +3,7 @@ val_data_dir: data/Evaluation_Datasets/semeval2007
 model_name: distilbert-base-uncased
 output_dir: output
 num_sense: 5
-max_seq_len: 512
+max_seq_len: 128
 batch_size: 16
 lr: 0.00001
 weight_decay: 0.01
@@ -17,5 +17,5 @@ device: cuda
 seed: 42
 workers: 1
 report_to: wandb
-architecture: span
+architecture: cosine
 do_predict: true
