@@ -63,7 +63,7 @@ def main(args: argparse.Namespace):
         val_dataset = SpanDataset(
             dataframe=DataBuilder(args.val_data_dir, args.pos, args.seed).to_pandas(), 
             tokenizer=tokenizer, max_seq_length=args.max_seq_len
-        )
+)
         train_dataloader = DataLoader(
             dataset=train_dataset, batch_size=args.batch_size, shuffle=True, 
             pin_memory=(args.device == "cuda"), num_workers=args.workers
@@ -74,7 +74,7 @@ def main(args: argparse.Namespace):
         )
         model = SpanExtractionModel(model_name=args.model_name, tokenizer=tokenizer)
         if args.report_to == "wandb":
-            wandb.watch(model, log=None, log_freq=args.logging_step)
+            wandb.watch(model, log=None, log_freq=args.logging_step, log_graph=True)
 
         span_train_fn(
             model=model, 
@@ -111,7 +111,7 @@ def main(args: argparse.Namespace):
         )
         model = WSDModel(model_name=args.model_name, tokenizer=tokenizer, n_sense=args.num_sense)
         if args.report_to == "wandb":
-            wandb.watch(model, log=None, log_freq=args.logging_step)
+            wandb.watch(model, log=None, log_freq=args.logging_step, log_graph=True)
 
         train_fn(
             model=model, 
