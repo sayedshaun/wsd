@@ -73,6 +73,8 @@ def main(args: argparse.Namespace):
             pin_memory=(args.device == "cuda"), num_workers=args.workers
         )
         model = SpanExtractionModel(model_name=args.model_name, tokenizer=tokenizer)
+        if args.report_to == "wandb":
+            wandb.watch(model, log=None, log_freq=args.logging_step)
 
         span_train_fn(
             model=model, 
@@ -108,6 +110,8 @@ def main(args: argparse.Namespace):
             pin_memory=(args.device == "cuda"), num_workers= args.workers
         )
         model = WSDModel(model_name=args.model_name, tokenizer=tokenizer, n_sense=args.num_sense)
+        if args.report_to == "wandb":
+            wandb.watch(model, log=None, log_freq=args.logging_step)
 
         train_fn(
             model=model, 
