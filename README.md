@@ -77,6 +77,20 @@ python predict.py --data_dir "data/Evaluation_Datasets/semeval2015" \
                   --architecture "cosine"
 ```
 
+
+## Evaluation Results
+
+### Span Extraction
+| Dataset     | Loss   | Start F1 | End F1 | Exact Match | Joint F1 | POS  | Architecture |
+|-------------|--------|----------|--------|--------------|----------|------|-------------|
+| ALL         | 0.512  | 0.8129   | 0.8170 | 0.7962       | 0.8087   | ALL  | span        |
+| semeval2007 | 0.517  | 0.8088   | 0.8088 | 0.7934       | 0.8037   | ALL  | span        |
+| semeval2013 | 0.524  | 0.8054   | 0.8096 | 0.7835       | 0.7995   | ALL  | span        |
+| semeval2015 | 0.611  | 0.7916   | 0.7955 | 0.7769       | 0.7880   | ALL  | span        |
+| senseval2   | 0.527  | 0.8094   | 0.8146 | 0.7927       | 0.8056   | ALL  | span        |
+| senseval3   | 0.476  | 0.8151   | 0.8232 | 0.8043       | 0.8142   | ALL  | span        |
+
+
 ## Dataset Details
 
 ### [Training](https://lcl.uniroma1.it/wsdeval/training-data)
