@@ -91,6 +91,16 @@ python predict.py \
 | senseval2   | 0.527  | 0.8094   | 0.8146 | 0.7927       | 0.8056   | ALL  | span        |
 | senseval3   | 0.476  | 0.8151   | 0.8232 | 0.8043       | 0.8142   | ALL  | span        |
 
+### Cosine Similarity
+| Dataset     | Loss   | F1     | Precision | Recall | Accuracy | POS  | Architecture |
+|-------------|--------|--------|-----------|--------|----------|------|---------------|
+| ALL         | 0.5684 | 0.8024 | 0.8024    | 0.8024 | 0.8024   | ALL  | cosine        |
+| semeval2007 | 0.5524 | 0.8066 | 0.8066    | 0.8066 | 0.8066   | ALL  | cosine        |
+| semeval2013 | 0.4821 | 0.8303 | 0.8303    | 0.8303 | 0.8303   | ALL  | cosine        |
+| semeval2015 | 0.6726 | 0.7965 | 0.7965    | 0.7965 | 0.7965   | ALL  | cosine        |
+| senseval2   | 0.5827 | 0.7993 | 0.7993    | 0.7993 | 0.7993   | ALL  | cosine        |
+| senseval3   | 0.5064 | 0.8000 | 0.8000    | 0.8000 | 0.8000   | ALL  | cosine        |
+
 
 ## Dataset Details
 
