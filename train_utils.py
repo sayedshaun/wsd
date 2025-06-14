@@ -215,7 +215,7 @@ def span_train_fn(
                             {
                                 'train/epoch': epoch,
                                 'train/global_step': global_step,
-                                'train/loss': total_loss / logging_step,
+                                'train/loss': round(total_loss / logging_step, 4),
                                 'train/start_f1': start_f1,
                                 'train/end_f1': end_f1,
                                 'train/joint_f1': joint_f1,
