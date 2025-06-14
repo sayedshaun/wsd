@@ -66,15 +66,16 @@ do_predict: true                                    # predict after training
 
 ## Evaluation
 ```bash
-python predict.py --data_dir "data/Evaluation_Datasets/semeval2015" \
-                  --model_name "distilbert-base-uncased" \
-                  --weight_dir "output/semeval2007" \
-                  --pos "ALL" \
-                  --seed 1234 \
-                  --num_sense 5 \
-                  --max_length 256 \
-                  --batch_size 32 \
-                  --architecture "cosine"
+python predict.py \
+    --data_dir "data/Evaluation_Datasets/semeval2015" \
+    --model_name "distilbert-base-uncased" \
+    --weight_dir "output/semeval2007" \
+    --pos "ALL" \
+    --seed 1234 \
+    --num_sense 5 \
+    --max_length 256 \
+    --batch_size 32 \
+    --architecture "cosine"
 ```
 
 
