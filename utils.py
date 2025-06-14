@@ -237,7 +237,7 @@ def plot_metrics(json_path: str, save_path: str = None) -> None:
     plt.legend()
     plt.grid(True)
     plt.tight_layout(pad=0.1)  # Reduce padding
-    plt.savefig(f"{save_path}/metrics_plot.png", bbox_inches='tight')
+    plt.savefig(f"{save_path}/line.png", bbox_inches='tight')
     plt.close()
 
     # Heatmap
