@@ -103,6 +103,7 @@ Both architectures are fine-tuned on `SemCor` dataset and pretrained [`distilber
 | senseval2   | 0.5827 | 0.7993 | 0.7993    | 0.7993 | 0.7993   | ALL  | cosine        |
 | senseval3   | 0.5064 | 0.8000 | 0.8000    | 0.8000 | 0.8000   | ALL  | cosine        |
 
+ ####  Finetuned weights are available [here](https://drive.google.com/drive/folders/1K3wnrI0IHvW6xysqiM1WopYlqrwPG0zR)
 
 ## Dataset Details
 
