@@ -123,7 +123,7 @@ If you use this repository in your work, please cite it as:
 ```latex
 @misc{wsd,
     author       = {Md Abu Sayed Shaun},
-    title        = {Word Sense Disambiguation (WSD)},
+    title        = {Dual Architecture pipeline for Word Sense Disambiguation (WSD)},
     year         = {2025},
     howpublished = {\url{https://github.com/sayedshaun/wsd}},
     note         = {GitHub repository}
