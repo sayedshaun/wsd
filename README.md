@@ -1,11 +1,12 @@
 ![alt text](docs/image.png)
 Copyright (c), [Barba](https://aclanthology.org/2021.naacl-main.371/) and [Blevins](https://aclanthology.org/2020.acl-main.95/).
-# Word Sense Disambiguation (WSD) 
+# Dual Architecture pipeline for Word Sense Disambiguation (WSD)
+
 This project implements algorithms and tools for Word Sense Disambiguation (WSD), the task of determining the correct meaning of a word based on its context in a sentence. It provides datasets, evaluation scripts, and models to facilitate research and development in natural language processing applications where accurate word sense interpretation is essential.
 
 ## Project Structure
 ```
-📁 Word Sense Disambiguation (WSD)
+📁 wsd
     ├── 📄 .gitignore
     ├── 📄 LICENSE
     ├── 📄 README.md
@@ -26,7 +27,6 @@ This project implements algorithms and tools for Word Sense Disambiguation (WSD)
     ├── 📊 Data
     │   ├── 📄 dataset.py
     │   ├── 📄 data_builder.py
-    │
 ```
 ## Setup
 This project requires `python=3.10`
@@ -81,6 +81,8 @@ python predict.py \
 
 ## Evaluation Results
 
+Both architectures are fine-tuned on `SemCor` dataset and pretrained [`distilbert-base-uncased`](https://huggingface.co/distilbert/distilbert-base-uncased) model.
+
 ### Span Extraction
 | Dataset     | Loss   | Start F1 | End F1 | Exact Match | Joint F1 | POS  | Architecture |
 |-------------|--------|----------|--------|--------------|----------|------|-------------|
@@ -113,3 +115,17 @@ python predict.py \
 - SemEval 2015
 - Senseval 2
 - Senseval 3
+
+
+## References
+If you use this repository in your work, please cite it as:
+
+```latex
+@misc{wsd,
+    author       = {Md Abu Sayed Shaun},
+    title        = {Word Sense Disambiguation (WSD)},
+    year         = {2025},
+    howpublished = {\url{https://github.com/sayedshaun/wsd}},
+    note         = {GitHub repository}
+}
+```
