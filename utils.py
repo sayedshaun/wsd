@@ -129,7 +129,7 @@ def eval_metrics_for_span_extraction(
     ]
     em = sum(exact_match) / len(exact_match)
     joint_f1 = np.mean([start_f1, end_f1, em])
-    return round(start_f1, 4), round(end_f1, 4), round(joint_f1, 4), round(em, 4)
+    return start_f1, end_f1, joint_f1, em
 
 
 def evaluation_fn(
@@ -210,7 +210,7 @@ def span_evaluation_fn(
         start_true, start_pred = [], []
         end_true, end_pred = [], []
         model.train()
-        return loss, start_f1, end_f1, joint_f1, em
+        return round(loss, 4), round(start_f1, 4), round(end_f1, 4), round(joint_f1, 4), round(em, 4)
     
 
 def plot_metrics(json_path: str, save_path: str = None) -> None:
@@ -220,27 +220,33 @@ def plot_metrics(json_path: str, save_path: str = None) -> None:
         json_path (str): Path to the metrics.json file.
         save_path (str, optional): If provided, saves the figure to this path.
     """
+    assert save_path is not None, "Please provide a valid save path for the plots."
+    def style_fn():
+        sns.set_style(style="darkgrid")
+        plt.figure(figsize=(10, 4))
+
+    style_fn()
     df = pd.read_json(json_path)
-    # Keep only numeric columns
-    df_numeric = df.select_dtypes(include=[np.number])
-    if df_numeric.empty:
-        print("No numeric metrics to plot.")
-        return
-    plt.figure(figsize=(10, 4))
-    ax = df_numeric.plot(
-        marker='o',
-        title="Metrics Across Datasets"
-    )
-    ax.set_xlabel("Dataset")
-    ax.set_ylabel("Value")
-    plt.tight_layout()
-    plt.savefig(f"{save_path}/line.png", dpi=300)
+    numeric_df = df.drop(index=["pos", "architecture"], errors="ignore")
+    df_t = numeric_df.transpose()
+
+    sns.lineplot(data=df_t, dashes=False, markers=True)
+    plt.title("Metrics Across Datasets")
+    plt.xlabel("Dataset")
+    plt.ylabel("Score")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout(pad=0.1)  # Reduce padding
+    plt.savefig(f"{save_path}/metrics_plot.png", bbox_inches='tight')
+    plt.close()
 
     # Heatmap
-    plt.figure(figsize=(10, 4))
-    sns.heatmap(df_numeric.T, annot=True, cmap="YlGnBu", cbar_kws={'label': 'Value'})
+    style_fn()
+    sns.heatmap(df_t.apply(pd.to_numeric, errors='coerce').transpose(), 
+                annot=True, cmap="YlGnBu", cbar_kws={'label': 'Value'})
     plt.title("Heatmap of Metrics across Datasets")
     plt.xlabel("Dataset")
     plt.ylabel("Metric")
-    plt.tight_layout()
-    plt.savefig(f"{save_path}/heatmap.png", dpi=300)
+    plt.tight_layout(pad=0.1)
+    plt.savefig(f"{save_path}/heatmap.png", bbox_inches='tight')
+    plt.close()
