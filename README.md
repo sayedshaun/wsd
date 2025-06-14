@@ -47,17 +47,17 @@ val_data_dir: data/Evaluation_Datasets/semeval2007  # Validation dataset dir
 model_name: distilbert-base-uncased                 # Huggingface model name
 output_dir: output                                  # output directory to save checkpoints
 num_sense: 5                                        # Recommended 4/5
-max_seq_len: 20                                     # Between [1, 512]
-batch_size: 1                                       # Batch size for training
+max_seq_len: 512                                    # Between [1, 512]
+batch_size: 16                                      # Batch size for training
 lr: 0.00001                                         # Learning rate
 weight_decay: 0.01                                  # Weight decay for optimizer
 epochs: 3                                           # Number of epochs
-logging_step: 10                                    # After how many steps to log
+logging_step: 2000                                  # After how many steps to log
 precision: fp16                                     # [fp16, fp32, bf16]
 warmup_ratio: 0.1                                   # After how many steps to warmup
 grad_clip: 1.0                                      # Gradient clipping factor
 pos_tag: ALL                                        # [ALL, NOUN, VERB, ADJ, ADV]
-device: cpu                                         # [cpu, cuda]
+device: cuda                                        # [cpu, cuda]
 seed: 1234                                          # [int,  none]
 report_to: wandb                                    # [wandb, none]
 architecture: span                                  # [span, cosine]
